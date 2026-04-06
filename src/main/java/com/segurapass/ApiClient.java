@@ -3,6 +3,8 @@ package com.segurapass;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.segurapass.exception.SdkException;
 
 import java.io.IOException;
@@ -36,7 +38,10 @@ public class ApiClient {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(connectionTimeout))
                 .build();
-        this.mapper = new ObjectMapper();
+        this.mapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .findAndRegisterModules();
         this.baseUrl = baseUrl;
         this.requestTimeout = requestTimeout;
         this.maxRetries = maxRetries;
