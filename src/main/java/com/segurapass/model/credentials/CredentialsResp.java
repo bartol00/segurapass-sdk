@@ -15,4 +15,5 @@ public class CredentialsResp {
     private String ivUsername;
     private String ivPassword;
     private Instant lastUpdated;
+    private boolean passwordVisible = false;
 }
