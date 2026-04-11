@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Get bump type
+        id: bump
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'major') }}" == "true" ]]; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'minor') }}" == "true" ]]; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'patch') }}" == "true" ]]; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "ERROR: No version label found" >&2
+            exit 1
+          fi
+
+      - name: Get latest tag
+        id: tag
+        run: |
+          git fetch --tags
+          TAG=$(git describe --tags --abbrev=0 || echo "v0.0.0")
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Calculate version
+        id: version
+        run: |
+          VERSION=${{ steps.tag.outputs.tag }}
+          VERSION=${VERSION#v}
+
+          IFS='.' read MAJOR MINOR PATCH <<< "$VERSION"
+
+          case "${{ steps.bump.outputs.type }}" in
+            major)
+              MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0;;
+            minor)
+              MINOR=$((MINOR+1)); PATCH=0;;
+            patch)
+              PATCH=$((PATCH+1));;
+          esac
+
+          echo "new=$MAJOR.$MINOR.$PATCH" >> $GITHUB_OUTPUT
+
+      - name: Maven version bump
+        run: |
+          mvn versions:set -DnewVersion=${{ steps.version.outputs.new }} -DgenerateBackupPoms=false
+
+      - name: Commit bump
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add pom.xml
+          git commit -m "Bump version to ${{ steps.version.outputs.new }} [skip ci]"
+          git pull --rebase
+          git push
+
+      - name: Tag release
+        run: |
+          git tag v${{ steps.version.outputs.new }} HEAD
+          git push origin v${{ steps.version.outputs.new }}
