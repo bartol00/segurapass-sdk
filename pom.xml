@@ -6,7 +6,7 @@
 
     <groupId>xyz.segurapass</groupId>
     <artifactId>segurapass-sdk</artifactId>
-    <version>1.1.2-SNAPSHOT</version>
+    <version>1.1.2</version>
 
     <name>SeguraPass SDK</name>
     <description>Java SDK for SeguraPass authentication</description>
