@@ -83,3 +83,25 @@ jobs:
         run: |
           git tag v${{ steps.version.outputs.new }} HEAD
           git push origin v${{ steps.version.outputs.new }}
+
+      - name: Calculate next snapshot
+        id: snapshot
+        run: |
+          VERSION=${{ steps.version.outputs.new }}
+
+          IFS='.' read MAJOR MINOR PATCH <<< "$VERSION"
+
+          PATCH=$((PATCH+1))
+
+          NEXT="$MAJOR.$MINOR.$PATCH-SNAPSHOT"
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+
+      - name: Set next snapshot version
+        run: |
+          mvn versions:set -DnewVersion=${{ steps.snapshot.outputs.next }} -DgenerateBackupPoms=false
+
+      - name: Commit next snapshot
+        run: |
+          git add pom.xml
+          git commit -m "Start next development iteration ${{ steps.snapshot.outputs.next }} [skip ci]"
+          git push
