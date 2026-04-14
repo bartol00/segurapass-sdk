@@ -5,7 +5,7 @@ on:
     types: [closed]
 
 concurrency:
-  group: release
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
