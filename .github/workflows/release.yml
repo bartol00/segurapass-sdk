@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [closed]
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   resolve-bump:
     if: github.event.pull_request.merged == true
@@ -14,7 +18,7 @@ jobs:
     steps:
       - id: bump
         run: |
-          LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | tr -d '[]"')
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
 
           COUNT=0
           for type in major minor patch; do
@@ -34,7 +38,12 @@ jobs:
   release:
     needs: resolve-bump
     if: github.event.pull_request.merged == true
+
+    permissions:
+      contents: write
+
     uses: bartol00/spring-boot-ci/.github/workflows/release.yml@v1
+
     with:
       bump-type: ${{ needs.resolve-bump.outputs.bump }}
       java-version: "17"
