@@ -29,7 +29,6 @@ public class SegurapassClient {
         this.versionService = new VersionServiceImpl(apiClient);
     }
 
-    // always returns the latest JWT
     public Supplier<String> jwtSupplier() {
         return () -> jwt;
     }
