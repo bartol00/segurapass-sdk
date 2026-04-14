@@ -34,7 +34,7 @@ jobs:
   release:
     needs: resolve-bump
     if: github.event.pull_request.merged == true
-    uses: bartol00/spring-boot-ci/.github/workflows/release.yml@v1
+    uses: bartol00/spring-boot-ci/.github/workflows/release.yml@main
     with:
       bump-type: ${{ needs.resolve-bump.outputs.bump }}
       java-version: "17"
