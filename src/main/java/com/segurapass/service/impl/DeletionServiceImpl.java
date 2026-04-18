@@ -1,11 +1,12 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.ApiClient;
+import com.segurapass.service.api.ApiClient;
 import com.segurapass.model.deletion.AuthorizedDeletionCompleteReq;
 import com.segurapass.model.deletion.AuthorizedDeletionStartReq;
 import com.segurapass.model.deletion.AuthorizedDeletionStartResp;
 import com.segurapass.model.deletion.EmailDeletionStartReq;
 import com.segurapass.service.DeletionService;
+import com.segurapass.service.api.ApiResponse;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.agreement.srp.SRP6Util;
@@ -16,6 +17,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -65,7 +68,7 @@ public class DeletionServiceImpl implements DeletionService {
                 Base64.getEncoder().encodeToString(A.toByteArray())
         );
 
-        AuthorizedDeletionStartResp startResp = apiClient.sendPostRequest(
+        ApiResponse<AuthorizedDeletionStartResp> startApiResponse = apiClient.sendPostRequest(
                 startReq,
                 startEndpoint,
                 null,
@@ -73,6 +76,8 @@ public class DeletionServiceImpl implements DeletionService {
                 null,
                 AuthorizedDeletionStartResp.class
         );
+
+        AuthorizedDeletionStartResp startResp = startApiResponse.getBody();
 
         byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
         BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
@@ -97,12 +102,18 @@ public class DeletionServiceImpl implements DeletionService {
                 Base64.getEncoder().encodeToString(M1.toByteArray())
         );
 
+        String requestId = startApiResponse.getHeaders()
+                .firstValue("X-Request-ID")
+                .orElse(null);
+        Map<String, String> completeReqHeaders = new HashMap<>();
+        completeReqHeaders.put("X-Request-ID", requestId);
+
         apiClient.sendPostRequest(
                 completeReq,
                 endEndpoint,
                 null,
                 jwtSupplier.get(),
-                null,
+                completeReqHeaders,
                 null
         );
     }
