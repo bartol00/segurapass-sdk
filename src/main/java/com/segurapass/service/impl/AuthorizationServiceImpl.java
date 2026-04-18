@@ -1,9 +1,10 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.ApiClient;
+import com.segurapass.service.api.ApiClient;
 import com.segurapass.exception.SdkException;
 import com.segurapass.model.authorization.*;
 import com.segurapass.service.AuthorizationService;
+import com.segurapass.service.api.ApiResponse;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.agreement.srp.SRP6Util;
@@ -14,6 +15,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class AuthorizationServiceImpl implements AuthorizationService {
@@ -94,7 +97,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 Base64.getEncoder().encodeToString(A.toByteArray())
         );
 
-        LoginStartResp startResp = apiClient.sendPostRequest(
+        ApiResponse<LoginStartResp> startApiResponse = apiClient.sendPostRequest(
                 startReq,
                 startEndpoint,
                 null,
@@ -102,6 +105,8 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 null,
                 LoginStartResp.class
         );
+
+        LoginStartResp startResp = startApiResponse.getBody();
 
         byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
         BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
@@ -127,14 +132,20 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 Base64.getEncoder().encodeToString(M1.toByteArray())
         );
 
+        String requestId = startApiResponse.getHeaders()
+                .firstValue("X-Request-ID")
+                .orElse(null);
+        Map<String, String> completeReqHeaders = new HashMap<>();
+        completeReqHeaders.put("X-Request-ID", requestId);
+
         LoginCompleteResp completeResp = apiClient.sendPostRequest(
                 completeReq,
                 completeEndpoint,
                 null,
                 null,
-                null,
+                completeReqHeaders,
                 LoginCompleteResp.class
-        );
+        ).getBody();
 
         BigInteger M2_client = SRP6Util.calculateM2(digest, A, M1, S, B);
 
@@ -162,7 +173,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 null,
                 null,
                 RefreshResp.class
-        );
+        ).getBody();
     }
 
     @Override

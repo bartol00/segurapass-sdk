@@ -4,6 +4,7 @@ import com.segurapass.service.AuthorizationService;
 import com.segurapass.service.CredentialsService;
 import com.segurapass.service.DeletionService;
 import com.segurapass.service.VersionService;
+import com.segurapass.service.api.ApiClient;
 import com.segurapass.service.impl.AuthorizationServiceImpl;
 import com.segurapass.service.impl.CredentialsServiceImpl;
 import com.segurapass.service.impl.DeletionServiceImpl;

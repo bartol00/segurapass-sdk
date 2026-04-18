@@ -1,4 +1,4 @@
-package com.segurapass;
+package com.segurapass.service.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +49,7 @@ public class ApiClient {
         this.retryCooldownMillis = retryCooldownMillis;
     }
 
-    public <T> T sendGetRequest(String path,
+    public <T> ApiResponse<T> sendGetRequest(String path,
                                Map<String, String> queryParams,
                                String jwt,
                                Map<String, String> extraHeaders,
@@ -59,11 +60,10 @@ public class ApiClient {
                 .GET()
                 .build();
 
-        String body = send(request, path, httpMethod);
-        return parseResponse(body, responseType, path, httpMethod);
+        return send(request, path, httpMethod, responseType);
     }
 
-    public <T> T sendGetRequest(String path,
+    public <T> ApiResponse<T> sendGetRequest(String path,
                                 Map<String, String> queryParams,
                                 String jwt,
                                 Map<String, String> extraHeaders,
@@ -74,11 +74,10 @@ public class ApiClient {
                 .GET()
                 .build();
 
-        String body = send(request, path, httpMethod);
-        return parseResponse(body, responseType, path, httpMethod);
+        return send(request, path, httpMethod, responseType);
     }
 
-    public <T> T sendPostRequest(Object dto,
+    public <T> ApiResponse<T> sendPostRequest(Object dto,
                                 String path,
                                 Map<String, String> queryParams,
                                 String jwt,
@@ -91,11 +90,10 @@ public class ApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(toJsonBody(dto, path, httpMethod)))
                 .build();
 
-        String body = send(request, path, httpMethod);
-        return parseResponse(body, responseType, path, httpMethod);
+        return send(request, path, httpMethod, responseType);
     }
 
-    public <T> T sendPutRequest(Object dto,
+    public <T> ApiResponse<T> sendPutRequest(Object dto,
                                String path,
                                Map<String, String> queryParams,
                                String jwt,
@@ -108,11 +106,10 @@ public class ApiClient {
                 .PUT(HttpRequest.BodyPublishers.ofString(toJsonBody(dto, path, httpMethod)))
                 .build();
 
-        String body = send(request, path, httpMethod);
-        return parseResponse(body, responseType, path, httpMethod);
+        return send(request, path, httpMethod, responseType);
     }
 
-    public <T> T sendDeleteRequest(String path,
+    public <T> ApiResponse<T> sendDeleteRequest(String path,
                                   Map<String, String> queryParams,
                                   String jwt,
                                   Map<String, String> extraHeaders,
@@ -123,8 +120,7 @@ public class ApiClient {
                 .DELETE()
                 .build();
 
-        String body = send(request, path, httpMethod);
-        return parseResponse(body, responseType, path, httpMethod);
+        return send(request, path, httpMethod, responseType);
     }
 
     private HttpRequest.Builder baseRequest(String path,
@@ -193,7 +189,7 @@ public class ApiClient {
         }
     }
 
-    private String send(HttpRequest request, String path, String httpMethod) throws SdkException {
+    private HttpResponse<String> executeWithRetry(HttpRequest request, String path, String httpMethod) throws SdkException {
         int attempt = 0;
         long retryCooldownMillis = this.retryCooldownMillis;
         boolean idempotent = httpMethod.equals("GET") || httpMethod.equals("DELETE");
@@ -207,7 +203,7 @@ public class ApiClient {
                 String body = response.body();
 
                 if (statusCode >= 200 && statusCode < 300) {
-                    return body;
+                    return response;
                 }
 
                 // Retry on server errors (5xx), otherwise throw
@@ -237,5 +233,37 @@ public class ApiClient {
                 throw new SdkException(0, httpMethod, message, path, e);
             }
         }
+    }
+
+    private <T> ApiResponse<T> send(
+            HttpRequest request,
+            String path,
+            String httpMethod,
+            Class<T> responseType
+    ) {
+
+        HttpResponse<String> response = executeWithRetry(request, path, httpMethod);
+
+        T body = parseResponse(response.body(), responseType, path, httpMethod);
+        HttpHeaders headers = response.headers();
+        int statusCode = response.statusCode();
+
+        return new ApiResponse<>(body, headers, statusCode);
+    }
+
+    private <T> ApiResponse<T> send(
+            HttpRequest request,
+            String path,
+            String httpMethod,
+            TypeReference<T> responseType
+    ) {
+
+        HttpResponse<String> response = executeWithRetry(request, path, httpMethod);
+
+        T body = parseResponse(response.body(), responseType, path, httpMethod);
+        HttpHeaders headers = response.headers();
+        int statusCode = response.statusCode();
+
+        return new ApiResponse<>(body, headers, statusCode);
     }
 }

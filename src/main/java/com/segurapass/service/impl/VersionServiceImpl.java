@@ -1,6 +1,6 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.ApiClient;
+import com.segurapass.service.api.ApiClient;
 import com.segurapass.model.versions.VersionInfo;
 import com.segurapass.service.VersionService;
 
@@ -24,6 +24,6 @@ public class VersionServiceImpl implements VersionService {
                 null,
                 null,
                 VersionInfo.class
-        );
+        ).getBody();
     }
 }
