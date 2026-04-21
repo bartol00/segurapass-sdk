@@ -1,10 +1,10 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.service.api.ApiClient;
+import com.segurapass.api.ApiClient;
 import com.segurapass.exception.SdkException;
 import com.segurapass.model.authorization.*;
 import com.segurapass.service.AuthorizationService;
-import com.segurapass.service.api.ApiResponse;
+import com.segurapass.api.ApiResponse;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.agreement.srp.SRP6Util;

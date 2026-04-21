@@ -1,6 +1,6 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.service.api.ApiClient;
+import com.segurapass.api.ApiClient;
 import com.segurapass.model.versions.VersionInfo;
 import com.segurapass.service.VersionService;
 

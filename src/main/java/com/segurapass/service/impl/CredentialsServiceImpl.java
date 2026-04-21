@@ -1,7 +1,7 @@
 package com.segurapass.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.segurapass.service.api.ApiClient;
+import com.segurapass.api.ApiClient;
 import com.segurapass.model.credentials.CredentialsReq;
 import com.segurapass.model.credentials.CredentialsResp;
 import com.segurapass.model.credentials.PagedResponse;

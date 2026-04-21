@@ -1,12 +1,12 @@
 package com.segurapass.service.impl;
 
-import com.segurapass.service.api.ApiClient;
+import com.segurapass.api.ApiClient;
 import com.segurapass.model.deletion.AuthorizedDeletionCompleteReq;
 import com.segurapass.model.deletion.AuthorizedDeletionStartReq;
 import com.segurapass.model.deletion.AuthorizedDeletionStartResp;
 import com.segurapass.model.deletion.EmailDeletionStartReq;
 import com.segurapass.service.DeletionService;
-import com.segurapass.service.api.ApiResponse;
+import com.segurapass.api.ApiResponse;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.agreement.srp.SRP6Util;

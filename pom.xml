@@ -40,9 +40,17 @@
         <lombok.version>1.18.42</lombok.version>
         <jackson.version>2.21.2</jackson.version>
         <bouncycastle.version>1.82</bouncycastle.version>
+        <api-client.version>1.0.0</api-client.version>
     </properties>
 
     <dependencies>
+        <!-- Proprietary -->
+        <dependency>
+            <groupId>xyz.segurapass</groupId>
+            <artifactId>api-client</artifactId>
+            <version>${api-client.version}</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
