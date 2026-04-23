@@ -1,14 +1,8 @@
 package com.segurapass;
 
-import com.segurapass.service.AuthorizationService;
-import com.segurapass.service.CredentialsService;
-import com.segurapass.service.DeletionService;
-import com.segurapass.service.VersionService;
+import com.segurapass.service.*;
 import com.segurapass.api.ApiClient;
-import com.segurapass.service.impl.AuthorizationServiceImpl;
-import com.segurapass.service.impl.CredentialsServiceImpl;
-import com.segurapass.service.impl.DeletionServiceImpl;
-import com.segurapass.service.impl.VersionServiceImpl;
+import com.segurapass.service.impl.*;
 import lombok.Setter;
 
 import java.util.function.Supplier;
@@ -19,6 +13,7 @@ public class SegurapassClient {
     private final CredentialsService credentialsService;
     private final DeletionService deletionService;
     private final VersionService versionService;
+    private final KeyService keyService;
     @Setter
     private String jwt;
 
@@ -28,6 +23,7 @@ public class SegurapassClient {
         this.credentialsService = new CredentialsServiceImpl(apiClient, jwtSupplier());
         this.deletionService = new DeletionServiceImpl(apiClient, jwtSupplier());
         this.versionService = new VersionServiceImpl(apiClient);
+        this.keyService = new KeyServiceImpl(apiClient);
     }
 
     public Supplier<String> jwtSupplier() {
@@ -48,5 +44,9 @@ public class SegurapassClient {
 
     public VersionService version() {
         return versionService;
+    }
+
+    public KeyService keys()  {
+        return keyService;
     }
 }
