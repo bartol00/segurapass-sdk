@@ -1,8 +1,8 @@
 package com.segurapass.service;
 
+import xyz.segurapass.api.authorization.LoginCompleteResp;
+import xyz.segurapass.api.authorization.RefreshResp;
 import com.segurapass.exception.SdkException;
-import com.segurapass.model.authorization.LoginCompleteResp;
-import com.segurapass.model.authorization.RefreshResp;
 
 import java.util.UUID;
 

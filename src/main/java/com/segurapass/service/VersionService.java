@@ -1,7 +1,7 @@
 package com.segurapass.service;
 
+import xyz.segurapass.api.versions.VersionInfo;
 import com.segurapass.exception.SdkException;
-import com.segurapass.model.versions.VersionInfo;
 
 public interface VersionService {
 

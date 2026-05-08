@@ -1,8 +1,8 @@
 package com.segurapass.service.impl;
 
+import xyz.segurapass.api.authorization.*;
 import com.segurapass.api.ApiClient;
 import com.segurapass.exception.SdkException;
-import com.segurapass.model.authorization.*;
 import com.segurapass.service.AuthorizationService;
 import com.segurapass.api.ApiResponse;
 import org.bouncycastle.crypto.Digest;

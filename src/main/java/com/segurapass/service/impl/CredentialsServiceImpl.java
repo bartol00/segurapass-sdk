@@ -1,10 +1,8 @@
 package com.segurapass.service.impl;
 
+import xyz.segurapass.api.credentials.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.segurapass.api.ApiClient;
-import com.segurapass.model.credentials.CredentialsReq;
-import com.segurapass.model.credentials.CredentialsResp;
-import com.segurapass.model.credentials.PagedResponse;
 import com.segurapass.service.CredentialsService;
 
 import java.util.Map;
@@ -23,7 +21,7 @@ public class CredentialsServiceImpl implements CredentialsService {
     }
 
     @Override
-    public PagedResponse<CredentialsResp> getCredentials(int page, int size) {
+    public PagedResponse<CredentialsRespSdk> getCredentials(int page, int size) {
         String endpoint = baseEndpoint + "/get";
 
         Map<String,String> params = Map.of(
@@ -31,8 +29,8 @@ public class CredentialsServiceImpl implements CredentialsService {
                 "size", String.valueOf(size)
         );
 
-        TypeReference<PagedResponse<CredentialsResp>> type =
-                new TypeReference<PagedResponse<CredentialsResp>>() {};
+        TypeReference<PagedResponse<CredentialsRespSdk>> type =
+                new TypeReference<>() {};
 
         return apiClient.sendGetRequest(
                 endpoint,
@@ -44,7 +42,7 @@ public class CredentialsServiceImpl implements CredentialsService {
     }
 
     @Override
-    public CredentialsResp addCredential(String website, String ivWebsite, String username, String ivUsername, String password, String ivPassword) {
+    public CredentialsRespSdk addCredential(String website, String ivWebsite, String username, String ivUsername, String password, String ivPassword) {
         String endpoint = baseEndpoint + "/create";
 
         CredentialsReq req = new CredentialsReq(
@@ -62,12 +60,12 @@ public class CredentialsServiceImpl implements CredentialsService {
                 null,
                 jwtSupplier.get(),
                 null,
-                CredentialsResp.class
+                CredentialsRespSdk.class
         ).getBody();
     }
 
     @Override
-    public CredentialsResp updateCredential(String website, String ivWebsite, String username, String ivUsername, String password, String ivPassword, String credentialId) {
+    public CredentialsRespSdk updateCredential(String website, String ivWebsite, String username, String ivUsername, String password, String ivPassword, String credentialId) {
         String endpoint = baseEndpoint + "/update/" + credentialId;
 
         CredentialsReq req = new CredentialsReq(
@@ -85,7 +83,7 @@ public class CredentialsServiceImpl implements CredentialsService {
                 null,
                 jwtSupplier.get(),
                 null,
-                CredentialsResp.class
+                CredentialsRespSdk.class
         ).getBody();
     }
 
