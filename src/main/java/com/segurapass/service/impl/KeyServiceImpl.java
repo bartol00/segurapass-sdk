@@ -1,12 +1,12 @@
 package com.segurapass.service.impl;
 
+import xyz.segurapass.api.key.PublicKeyResp;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.segurapass.api.ApiClient;
 import com.segurapass.api.ApiResponse;
 import com.segurapass.exception.SdkException;
-import com.segurapass.model.key.PublicKeyResp;
 import com.segurapass.service.KeyService;
 
 import java.security.KeyFactory;
