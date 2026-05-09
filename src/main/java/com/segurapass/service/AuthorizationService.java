@@ -10,6 +10,6 @@ public interface AuthorizationService {
 
     void register(String email, String masterPassword, UUID deviceId) throws SdkException;
     LoginCompleteResp login(String email, String masterPassword, UUID deviceId) throws SdkException;
-    RefreshResp refreshJwt(String email, UUID deviceId, String refreshToken) throws SdkException;
-    void logout(String email, UUID deviceId, String refreshToken) throws SdkException;
+    RefreshResp refreshJwt(String refreshToken) throws SdkException;
+    void logout(String refreshToken) throws SdkException;
 }
