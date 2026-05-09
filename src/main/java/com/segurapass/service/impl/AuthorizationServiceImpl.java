@@ -157,14 +157,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
-    public RefreshResp refreshJwt(String email, UUID deviceId, String refreshToken) {
+    public RefreshResp refreshJwt(String refreshToken) {
         String endpoint = baseEndpoint + "/refresh";
 
-        RefreshReq req = new RefreshReq(
-                email,
-                deviceId,
-                refreshToken
-        );
+        RefreshReq req = new RefreshReq(refreshToken);
 
         return apiClient.sendPostRequest(
                 req,
@@ -177,14 +173,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
-    public void logout(String email, UUID deviceId, String refreshToken) {
+    public void logout(String refreshToken) {
         String endpoint = baseEndpoint + "/logout";
 
-        RefreshReq req = new RefreshReq(
-                email,
-                deviceId,
-                refreshToken
-        );
+        RefreshReq req = new RefreshReq(refreshToken);
 
         apiClient.sendPostRequest(
                 req,
