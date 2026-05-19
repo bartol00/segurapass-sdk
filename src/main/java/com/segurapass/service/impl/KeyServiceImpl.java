@@ -51,7 +51,6 @@ public class KeyServiceImpl implements KeyService {
                     .build();
 
             verifier.verify(token);
-            System.out.println("TOKEN VERIFIED");
             return true;
         } catch (Exception e) {
             return false;
@@ -67,9 +66,7 @@ public class KeyServiceImpl implements KeyService {
 
             byte[] decoded = Base64.getDecoder().decode(cleanPem);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
-            PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(spec);
-            System.out.println("PUBLIC KEY: " + Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-            return publicKey;
+            return KeyFactory.getInstance("RSA").generatePublic(spec);
         } catch (Exception e) {
             throw new SdkException(500, "GET", "Failed to parse public key", "/.well-known/public-key");
         }

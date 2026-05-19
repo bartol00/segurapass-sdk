@@ -1,29 +1,30 @@
 package com.segurapass.service.impl;
 
+import com.segurapass.helpers.*;
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.digests.SHA256Digest;
 import xyz.segurapass.api.authorization.*;
 import com.segurapass.api.ApiClient;
 import com.segurapass.exception.SdkException;
 import com.segurapass.service.AuthorizationService;
 import com.segurapass.api.ApiResponse;
-import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
-import org.bouncycastle.crypto.agreement.srp.SRP6Util;
-import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.params.SRP6GroupParameters;
 
+import javax.crypto.SecretKey;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+
+import static com.segurapass.helpers.SrpHelper.*;
 
 public class AuthorizationServiceImpl implements AuthorizationService {
 
     private final ApiClient apiClient;
     private final SRP6GroupParameters group;
     private final String baseEndpoint;
+    private final SecureRandom random = new SecureRandom();
 
     public AuthorizationServiceImpl(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -32,128 +33,130 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
-    public void register(String email, String masterPassword, UUID deviceId) {
+    public void register(String email, char[] masterPassword, UUID deviceId) {
+
         String endpoint = baseEndpoint + "/register";
-
         Digest digest = new SHA256Digest();
-        SecureRandom random = new SecureRandom();
 
-        byte[] saltKey = new byte[16];
-        random.nextBytes(saltKey);
+        try(SrpRegisterSession ctx = SrpRegisterSession.create(random, masterPassword)) {
+            BigInteger x = generateX(
+                    digest,
+                    ctx.saltAuth(),
+                    email.getBytes(StandardCharsets.UTF_8),
+                    ctx.passwordBytes()
+            );
+            BigInteger verifier = generateVerifier(x);
+            validateVerifier(verifier, endpoint);
 
-        byte[] saltAuth = new byte[16];
-        random.nextBytes(saltAuth);
+            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
+                    ctx.passwordBytes(),
+                    ctx.saltKey()
+            );
+            byte[] encryptedVaultKey = EncryptionHelper.encryptField(
+                    ctx.vaultKey(),
+                    ctx.vaultKeyIv(),
+                    masterPasswordKey
+            );
 
-        BigInteger x = SRP6Util.calculateX(
-                digest,
-                group.getN(),
-                saltAuth,
-                email.getBytes(StandardCharsets.UTF_8),
-                masterPassword.getBytes(StandardCharsets.UTF_8)
-        );
+            RegistrationReq req = new RegistrationReq(
+                    email,
+                    Base64.getEncoder().encodeToString(ctx.saltAuth()),
+                    Base64.getEncoder().encodeToString(verifier.toByteArray()),
+                    Base64.getEncoder().encodeToString(encryptedVaultKey),
+                    Base64.getEncoder().encodeToString(ctx.vaultKeyIv()),
+                    Base64.getEncoder().encodeToString(ctx.saltKey()),
+                    deviceId
+            );
 
-        BigInteger verifier = group.getG().modPow(x, group.getN());
+            apiClient.sendPostRequest(req, endpoint, null, null, null, null);
 
-        if (verifier.compareTo(BigInteger.ONE) < 0 || verifier.compareTo(group.getN()) >= 0) {
-            throw new SdkException(500, "POST", "Invalid SRP verifier computed. Please try registering again", endpoint);
+        } catch (SdkException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SdkException(500, "POST", "Could not register", endpoint);
         }
-
-        if (verifier.bitLength() < group.getN().bitLength() / 2) {
-            throw new SdkException(500, "POST", "Verifier is too small, which is a possible RNG issue. Please try registering again", endpoint);
-        }
-
-        RegistrationReq req = new RegistrationReq(
-                email,
-                Base64.getEncoder().encodeToString(saltAuth),
-                Base64.getEncoder().encodeToString(verifier.toByteArray()),
-                Base64.getEncoder().encodeToString(saltKey),
-                deviceId
-        );
-
-        apiClient.sendPostRequest(
-                req,
-                endpoint,
-                null,
-                null,
-                null,
-                null
-        );
     }
 
     @Override
-    public LoginCompleteResp login(String email, String masterPassword, UUID deviceId) {
+    public LoginSuccessObject login(String email, char[] masterPassword, UUID deviceId) {
         String startEndpoint = baseEndpoint + "/login/start";
         String completeEndpoint = baseEndpoint + "/login/end";
 
         Digest digest = new SHA256Digest();
-        SecureRandom random = new SecureRandom();
 
-        BigInteger a = new BigInteger(256, random);
-        BigInteger A = group.getG().modPow(a, group.getN());
+        try(SrpLoginSession ctx = SrpLoginSession.create(random, masterPassword, group)) {
+            LoginStartReq startReq = new LoginStartReq(
+                    email,
+                    deviceId,
+                    Base64.getEncoder().encodeToString(ctx.A().toByteArray())
+            );
 
-        LoginStartReq startReq = new LoginStartReq(
-                email,
-                deviceId,
-                Base64.getEncoder().encodeToString(A.toByteArray())
-        );
+            ApiResponse<LoginStartResp> startApiResponse = apiClient.sendPostRequest(
+                    startReq,
+                    startEndpoint,
+                    null,
+                    null,
+                    null,
+                    LoginStartResp.class
+            );
 
-        ApiResponse<LoginStartResp> startApiResponse = apiClient.sendPostRequest(
-                startReq,
-                startEndpoint,
-                null,
-                null,
-                null,
-                LoginStartResp.class
-        );
+            LoginStartResp startResp = startApiResponse.getBody();
 
-        LoginStartResp startResp = startApiResponse.getBody();
+            byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
+            BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
 
-        byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
-        BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
+            validatePublicValue(ctx.A(), "A", startEndpoint);
+            validatePublicValue(B, "B", startEndpoint);
 
-        BigInteger x = SRP6Util.calculateX(digest, group.getN(), saltAuth,
-                email.getBytes(StandardCharsets.UTF_8),
-                masterPassword.getBytes(StandardCharsets.UTF_8));
+            BigInteger x = generateX(
+                    digest,
+                    saltAuth,
+                    email.getBytes(StandardCharsets.UTF_8),
+                    ctx.passwordBytes()
+            );
+            BigInteger S = generateS(digest, x, ctx.a(), ctx.A(), B);
+            BigInteger M1 = generateM1(digest, ctx.A(), B, S);
 
-        BigInteger u = SRP6Util.calculateU(digest, group.getN(), A, B);
+            LoginCompleteReq completeReq = new LoginCompleteReq(
+                    email,
+                    deviceId,
+                    Base64.getEncoder().encodeToString(M1.toByteArray())
+            );
 
-        BigInteger k = SRP6Util.calculateK(digest, group.getN(), group.getG());
-        BigInteger S = B.subtract(k.multiply(group.getG().modPow(x, group.getN())))
-                .modPow(a.add(u.multiply(x)), group.getN());
-        byte[] K = new byte[digest.getDigestSize()];
-        digest.update(S.toByteArray(), 0, S.toByteArray().length);
-        digest.doFinal(K, 0);
+            String requestId = startApiResponse.getHeaders()
+                    .firstValue("X-Request-ID")
+                    .orElse(null);
+            Map<String, String> completeReqHeaders = new HashMap<>();
+            completeReqHeaders.put("X-Request-ID", requestId);
 
-        BigInteger M1 = SRP6Util.calculateM1(digest, group.getN(), A, B, S);
+            LoginCompleteResp completeResp = apiClient.sendPostRequest(
+                    completeReq,
+                    completeEndpoint,
+                    null,
+                    null,
+                    completeReqHeaders,
+                    LoginCompleteResp.class
+            ).getBody();
 
-        LoginCompleteReq completeReq = new LoginCompleteReq(
-                email,
-                deviceId,
-                Base64.getEncoder().encodeToString(M1.toByteArray())
-        );
+            BigInteger clientM2 = generateM2(digest, ctx.A(), B, S, M1);
+            if (!clientM2.equals(new BigInteger(1, Base64.getDecoder().decode(completeResp.getM2())))) {
+                throw new SdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
+            }
 
-        String requestId = startApiResponse.getHeaders()
-                .firstValue("X-Request-ID")
-                .orElse(null);
-        Map<String, String> completeReqHeaders = new HashMap<>();
-        completeReqHeaders.put("X-Request-ID", requestId);
+            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(ctx.passwordBytes(), Base64.getDecoder().decode(completeResp.getSaltKey()));
+            byte[] vaultKey = EncryptionHelper.decryptField(Base64.getDecoder().decode(completeResp.getVaultKey()), Base64.getDecoder().decode(completeResp.getIvVaultKey()), masterPasswordKey);
 
-        LoginCompleteResp completeResp = apiClient.sendPostRequest(
-                completeReq,
-                completeEndpoint,
-                null,
-                null,
-                completeReqHeaders,
-                LoginCompleteResp.class
-        ).getBody();
-
-        BigInteger M2_client = SRP6Util.calculateM2(digest, A, M1, S, B);
-
-        if (!M2_client.equals(new BigInteger(1, Base64.getDecoder().decode(completeResp.getM2())))) {
-            throw new SdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
+            return new LoginSuccessObject(
+                    vaultKey,
+                    completeResp.getAccessToken(),
+                    completeResp.getRefreshToken(),
+                    completeResp.getRefreshTokenExpiryTime()
+            );
+        } catch (SdkException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SdkException(500, "POST", "Could not login", completeEndpoint);
         }
-
-        return completeResp;
     }
 
     @Override

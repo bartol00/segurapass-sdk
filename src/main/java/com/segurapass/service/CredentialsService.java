@@ -1,20 +1,16 @@
 package com.segurapass.service;
 
+import com.segurapass.models.credentials.DecryptedCredentials;
 import xyz.segurapass.api.credentials.CredentialsRespSdk;
-import xyz.segurapass.api.credentials.PagedResponse;
 import com.segurapass.exception.SdkException;
 
 public interface CredentialsService {
 
-    PagedResponse<CredentialsRespSdk> getCredentials(int page, int size) throws SdkException;
-    CredentialsRespSdk addCredential(String website, String ivWebsite,
-                                     String username, String ivUsername,
-                                     String password, String ivPassword)
+    DecryptedCredentials getCredentials(int page, int size, byte[] vaultKeyBytes)
             throws SdkException;
-    CredentialsRespSdk updateCredential(String website, String ivWebsite,
-                                     String username, String ivUsername,
-                                     String password, String ivPassword,
-                                     String credentialId)
+    CredentialsRespSdk addCredential(String website, String username, String password, byte[] vaultKeyBytes)
+            throws SdkException;
+    CredentialsRespSdk updateCredential(String credentialId, String website, String username, String password, byte[] vaultKeyBytes)
             throws SdkException;
     void deleteCredential(String credentialId) throws SdkException;
 }
