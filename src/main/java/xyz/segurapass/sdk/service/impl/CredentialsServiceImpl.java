@@ -71,7 +71,7 @@ public class CredentialsServiceImpl implements CredentialsService {
     }
 
     @Override
-    public CredentialsRespSdk addCredential(
+    public DecryptedCredential addCredential(
             String website,
             String username,
             String password,
@@ -92,7 +92,7 @@ public class CredentialsServiceImpl implements CredentialsService {
             Map<String, String> headers = new HashMap<>();
             headers.put("Authorization", "Bearer " + jwtSupplier.get());
 
-            return apiClient.sendPostRequest(
+            CredentialsRespSdk credentialsRespSdk = apiClient.sendPostRequest(
                     req,
                     endpoint,
                     null,
@@ -100,11 +100,21 @@ public class CredentialsServiceImpl implements CredentialsService {
                     CredentialsRespSdk.class
             ).body();
 
+            return new DecryptedCredential(
+                    credentialsRespSdk.getCredentialsId(),
+                    website,
+                    username,
+                    password,
+                    credentialsRespSdk.getCreatedAt(),
+                    credentialsRespSdk.getLastUpdated(),
+                    false
+            );
+
         }
     }
 
     @Override
-    public CredentialsRespSdk updateCredential(
+    public DecryptedCredential updateCredential(
             String credentialId,
             String website,
             String username,
@@ -126,13 +136,23 @@ public class CredentialsServiceImpl implements CredentialsService {
             Map<String, String> headers = new HashMap<>();
             headers.put("Authorization", "Bearer " + jwtSupplier.get());
 
-            return apiClient.sendPutRequest(
+            CredentialsRespSdk credentialsRespSdk = apiClient.sendPutRequest(
                     req,
                     endpoint,
                     null,
                     headers,
                     CredentialsRespSdk.class
             ).body();
+
+            return new DecryptedCredential(
+                    credentialsRespSdk.getCredentialsId(),
+                    website,
+                    username,
+                    password,
+                    credentialsRespSdk.getCreatedAt(),
+                    credentialsRespSdk.getLastUpdated(),
+                    false
+            );
 
         }
     }

@@ -168,7 +168,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
-    public RefreshResp refreshJwt(String refreshToken) {
+    public String refreshJwt(String refreshToken) {
         String endpoint = baseEndpoint + "/refresh";
 
         RefreshReq req = new RefreshReq(refreshToken);
@@ -179,7 +179,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 null,
                 null,
                 RefreshResp.class
-        ).body();
+        ).body().getAccessToken();
     }
 
     @Override
