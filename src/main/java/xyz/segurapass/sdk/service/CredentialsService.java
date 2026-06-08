@@ -1,16 +1,21 @@
-package com.segurapass.service;
+package xyz.segurapass.sdk.service;
 
-import com.segurapass.models.credentials.DecryptedCredentials;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
+import xyz.segurapass.sdk.models.DecryptedCredentials;
 import xyz.segurapass.api.credentials.CredentialsRespSdk;
-import com.segurapass.exception.SdkException;
 
 public interface CredentialsService {
 
     DecryptedCredentials getCredentials(int page, int size, byte[] vaultKeyBytes)
-            throws SdkException;
+            throws SegurapassSdkException;
+
     CredentialsRespSdk addCredential(String website, String username, String password, byte[] vaultKeyBytes)
-            throws SdkException;
+            throws SegurapassSdkException;
+
     CredentialsRespSdk updateCredential(String credentialId, String website, String username, String password, byte[] vaultKeyBytes)
-            throws SdkException;
-    void deleteCredential(String credentialId) throws SdkException;
+            throws SegurapassSdkException;
+
+    void deleteCredential(String credentialId)
+            throws SegurapassSdkException;
+
 }

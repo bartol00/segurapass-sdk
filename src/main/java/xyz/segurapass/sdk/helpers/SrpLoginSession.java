@@ -1,4 +1,4 @@
-package com.segurapass.helpers;
+package xyz.segurapass.sdk.helpers;
 
 import org.bouncycastle.crypto.params.SRP6GroupParameters;
 

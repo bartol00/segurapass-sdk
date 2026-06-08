@@ -1,6 +1,6 @@
-package com.segurapass.helpers;
+package xyz.segurapass.sdk.helpers;
 
-import com.segurapass.exception.SdkException;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.agreement.srp.SRP6Util;
@@ -43,7 +43,7 @@ public class SrpHelper {
 
     public static void validatePublicValue(BigInteger value, String name, String endpoint) {
         if (value.mod(group.getN()).equals(BigInteger.ZERO)) {
-            throw new SdkException(
+            throw new SegurapassSdkException(
                     500,
                     "POST",
                     String.format("Invalid SRP verifier computed: %s", name),
@@ -54,7 +54,7 @@ public class SrpHelper {
 
     public static void validateVerifier(BigInteger verifier, String endpoint) {
         if (verifier.mod(group.getN()).equals(BigInteger.ZERO)) {
-            throw new SdkException(
+            throw new SegurapassSdkException(
                     500,
                     "POST",
                     "Invalid SRP verifier computed",

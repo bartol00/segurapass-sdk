@@ -1,29 +1,30 @@
-package com.segurapass;
+package xyz.segurapass.sdk;
 
-import com.segurapass.service.*;
+import xyz.segurapass.sdk.service.*;
 import com.segurapass.api.ApiClient;
-import com.segurapass.service.impl.*;
+import xyz.segurapass.sdk.service.impl.*;
 import lombok.Setter;
 
 import java.util.function.Supplier;
 
 public class SegurapassClient {
+
+    @Setter
+    private String jwt;
     private final AuthorizationService authorizationService;
     private final CredentialsService credentialsService;
     private final DeletionService deletionService;
-    private final VersionService versionService;
     private final KeyService keyService;
     private final PasswordChangeService passwordChangeService;
-    @Setter
-    private String jwt;
+    private final VersionService versionService;
 
     public SegurapassClient(ApiClient apiClient) {
         this.authorizationService = new AuthorizationServiceImpl(apiClient);
         this.credentialsService = new CredentialsServiceImpl(apiClient, jwtSupplier());
         this.deletionService = new DeletionServiceImpl(apiClient, jwtSupplier());
-        this.versionService = new VersionServiceImpl(apiClient);
         this.keyService = new KeyServiceImpl(apiClient);
         this.passwordChangeService = new PasswordChangeServiceImpl(apiClient, jwtSupplier());
+        this.versionService = new VersionServiceImpl(apiClient);
     }
 
     public Supplier<String> jwtSupplier() {
@@ -42,10 +43,6 @@ public class SegurapassClient {
         return deletionService;
     }
 
-    public VersionService version() {
-        return versionService;
-    }
-
     public KeyService keys()  {
         return keyService;
     }
@@ -53,4 +50,9 @@ public class SegurapassClient {
     public PasswordChangeService passwordChange() {
         return passwordChangeService;
     }
+
+    public VersionService version() {
+        return versionService;
+    }
+
 }

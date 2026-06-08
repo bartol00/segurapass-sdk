@@ -1,4 +1,4 @@
-package com.segurapass.models.credentials;
+package xyz.segurapass.sdk.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
