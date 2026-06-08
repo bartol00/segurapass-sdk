@@ -1,13 +1,13 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
 import xyz.segurapass.api.key.PublicKeyResp;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.segurapass.api.ApiClient;
 import com.segurapass.api.ApiResponse;
-import com.segurapass.exception.SdkException;
-import com.segurapass.service.KeyService;
+import xyz.segurapass.sdk.service.KeyService;
 
 import java.security.KeyFactory;
 import java.security.PublicKey;
@@ -33,11 +33,10 @@ public class KeyServiceImpl implements KeyService {
                 endpoint,
                 null,
                 null,
-                null,
                 PublicKeyResp.class
         );
 
-        return parsePublicKey(publicKeyResp.getBody().getPublicKey());
+        return parsePublicKey(publicKeyResp.body().getPublicKey());
     }
 
     @Override
@@ -57,8 +56,9 @@ public class KeyServiceImpl implements KeyService {
         }
     }
 
-    private PublicKey parsePublicKey(String publicKeyString) throws SdkException {
+    private PublicKey parsePublicKey(String publicKeyString) throws SegurapassSdkException {
         try {
+
             String cleanPem = publicKeyString
                     .replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "")
@@ -67,8 +67,9 @@ public class KeyServiceImpl implements KeyService {
             byte[] decoded = Base64.getDecoder().decode(cleanPem);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
             return KeyFactory.getInstance("RSA").generatePublic(spec);
+
         } catch (Exception e) {
-            throw new SdkException(500, "GET", "Failed to parse public key", "/.well-known/public-key");
+            throw new SegurapassSdkException(500, "GET", "Failed to parse public key", "/.well-known/public-key");
         }
     }
 

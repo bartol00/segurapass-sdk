@@ -1,11 +1,11 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
-import com.segurapass.helpers.SrpLoginSession;
+import xyz.segurapass.sdk.helpers.SrpLoginSession;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import xyz.segurapass.api.deletion.*;
 import com.segurapass.api.ApiClient;
-import com.segurapass.service.DeletionService;
+import xyz.segurapass.sdk.service.DeletionService;
 import com.segurapass.api.ApiResponse;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.params.SRP6GroupParameters;
@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import static com.segurapass.helpers.SrpHelper.*;
+import static xyz.segurapass.sdk.helpers.SrpHelper.*;
 
 public class DeletionServiceImpl implements DeletionService {
 
@@ -47,7 +47,6 @@ public class DeletionServiceImpl implements DeletionService {
                 endpoint,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -60,21 +59,24 @@ public class DeletionServiceImpl implements DeletionService {
         Digest digest = new SHA256Digest();
 
         try(SrpLoginSession ctx = SrpLoginSession.create(random, masterPassword, group)) {
+
             AuthorizedDeletionStartReq startReq = new AuthorizedDeletionStartReq(
                     deviceId,
                     Base64.getEncoder().encodeToString(ctx.A().toByteArray())
             );
 
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
             ApiResponse<AuthorizedDeletionStartResp> startApiResponse = apiClient.sendPostRequest(
                     startReq,
                     startEndpoint,
                     null,
-                    jwtSupplier.get(),
-                    null,
+                    headers,
                     AuthorizedDeletionStartResp.class
             );
 
-            AuthorizedDeletionStartResp startResp = startApiResponse.getBody();
+            AuthorizedDeletionStartResp startResp = startApiResponse.body();
 
             byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
@@ -96,17 +98,17 @@ public class DeletionServiceImpl implements DeletionService {
                     Base64.getEncoder().encodeToString(M1.toByteArray())
             );
 
-            String requestId = startApiResponse.getHeaders()
+            String requestId = startApiResponse.headers()
                     .firstValue("X-Request-ID")
                     .orElse(null);
             Map<String, String> completeReqHeaders = new HashMap<>();
             completeReqHeaders.put("X-Request-ID", requestId);
+            completeReqHeaders.put("Authorization", "Bearer " + jwtSupplier.get());
 
             apiClient.sendPostRequest(
                     completeReq,
                     endEndpoint,
                     null,
-                    jwtSupplier.get(),
                     completeReqHeaders,
                     null
             );

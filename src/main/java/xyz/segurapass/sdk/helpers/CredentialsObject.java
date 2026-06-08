@@ -1,4 +1,4 @@
-package com.segurapass.helpers;
+package xyz.segurapass.sdk.helpers;
 
 import java.util.Arrays;
 

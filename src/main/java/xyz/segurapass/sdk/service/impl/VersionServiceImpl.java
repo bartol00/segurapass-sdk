@@ -1,8 +1,8 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
 import xyz.segurapass.api.versions.VersionInfo;
 import com.segurapass.api.ApiClient;
-import com.segurapass.service.VersionService;
+import xyz.segurapass.sdk.service.VersionService;
 
 public class VersionServiceImpl implements VersionService {
 
@@ -22,8 +22,7 @@ public class VersionServiceImpl implements VersionService {
                 endpoint,
                 null,
                 null,
-                null,
                 VersionInfo.class
-        ).getBody();
+        ).body();
     }
 }

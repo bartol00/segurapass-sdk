@@ -1,14 +1,14 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
-import com.segurapass.exception.SdkException;
-import com.segurapass.helpers.CredentialsObject;
-import com.segurapass.helpers.EncryptionHelper;
-import com.segurapass.models.credentials.DecryptedCredential;
-import com.segurapass.models.credentials.DecryptedCredentials;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
+import xyz.segurapass.sdk.helpers.CredentialsObject;
+import xyz.segurapass.sdk.helpers.EncryptionHelper;
+import xyz.segurapass.sdk.models.DecryptedCredential;
+import xyz.segurapass.sdk.models.DecryptedCredentials;
 import xyz.segurapass.api.credentials.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.segurapass.api.ApiClient;
-import com.segurapass.service.CredentialsService;
+import xyz.segurapass.sdk.service.CredentialsService;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -34,11 +34,16 @@ public class CredentialsServiceImpl implements CredentialsService {
         String endpoint = baseEndpoint + "/get";
 
         try(CredentialsObject ctx = new CredentialsObject(vaultKeyBytes)) {
+
             TypeReference<PagedResponse<CredentialsRespSdk>> type =
                     new TypeReference<>() {};
 
             PagedResponse<CredentialsRespSdk> response;
             List<CredentialsRespSdk> encryptedCredentials = new ArrayList<>();
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
             do {
                 Map<String, String> params = new HashMap<>();
                 params.put("page", String.valueOf(page));
@@ -47,10 +52,9 @@ public class CredentialsServiceImpl implements CredentialsService {
                 response = apiClient.sendGetRequest(
                         endpoint,
                         params,
-                        jwtSupplier.get(),
-                        null,
+                        headers,
                         type
-                ).getBody();
+                ).body();
 
                 if (response == null || response.getContent() == null) {
                     break;
@@ -62,6 +66,7 @@ public class CredentialsServiceImpl implements CredentialsService {
             } while (page < response.getTotalPages());
 
             return decryptCredentials(encryptedCredentials, ctx.vaultKey(), endpoint);
+
         }
     }
 
@@ -75,6 +80,7 @@ public class CredentialsServiceImpl implements CredentialsService {
         String endpoint = baseEndpoint + "/create";
 
         try(CredentialsObject ctx = new CredentialsObject(vaultKeyBytes)) {
+
             CredentialsReq req = encryptCredentials(
                     website,
                     username,
@@ -83,14 +89,17 @@ public class CredentialsServiceImpl implements CredentialsService {
                     endpoint
             );
 
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
             return apiClient.sendPostRequest(
                     req,
                     endpoint,
                     null,
-                    jwtSupplier.get(),
-                    null,
+                    headers,
                     CredentialsRespSdk.class
-            ).getBody();
+            ).body();
+
         }
     }
 
@@ -105,6 +114,7 @@ public class CredentialsServiceImpl implements CredentialsService {
         String endpoint = baseEndpoint + "/update/" + credentialId;
 
         try(CredentialsObject ctx = new CredentialsObject(vaultKeyBytes)) {
+
             CredentialsReq req = encryptCredentials(
                     website,
                     username,
@@ -113,14 +123,17 @@ public class CredentialsServiceImpl implements CredentialsService {
                     endpoint
             );
 
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
             return apiClient.sendPutRequest(
                     req,
                     endpoint,
                     null,
-                    jwtSupplier.get(),
-                    null,
+                    headers,
                     CredentialsRespSdk.class
-            ).getBody();
+            ).body();
+
         }
     }
 
@@ -128,11 +141,13 @@ public class CredentialsServiceImpl implements CredentialsService {
     public void deleteCredential(String credentialId) {
         String endpoint = baseEndpoint + "/delete/" + credentialId;
 
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
         apiClient.sendDeleteRequest(
                 endpoint,
                 null,
-                jwtSupplier.get(),
-                null,
+                headers,
                 null
         );
     }
@@ -154,10 +169,6 @@ public class CredentialsServiceImpl implements CredentialsService {
                 String usernameIv = encryptedCredential.getIvUsername();
                 String encryptedPassword = encryptedCredential.getPassword();
                 String passwordIv = encryptedCredential.getIvPassword();
-
-                System.out.println("(DECRYPT) CIPHERTEXT IN: " + encryptedWebsite);
-                System.out.println("(DECRYPT) IV IN: " + websiteIv);
-                System.out.println("(DECRYPT) KEY IN: " + Base64.getEncoder().encodeToString(vaultKey.getEncoded()));
 
                 byte[] plaintextWebsite = EncryptionHelper.decryptField(
                         Base64.getDecoder().decode(encryptedWebsite),
@@ -189,7 +200,7 @@ public class CredentialsServiceImpl implements CredentialsService {
             return new DecryptedCredentials(credentials);
 
         } catch (Exception e) {
-            throw new SdkException(500, "GET", "Could not decrypt credentials", endpoint);
+            throw new SegurapassSdkException(500, "GET", "Could not decrypt credentials", endpoint);
         }
     }
 
@@ -247,7 +258,7 @@ public class CredentialsServiceImpl implements CredentialsService {
             return credentialsReq;
 
         } catch (Exception e) {
-            throw new SdkException(500, "POST", "Could not encrypt credentials", endpoint);
+            throw new SegurapassSdkException(500, "POST", "Could not encrypt credentials", endpoint);
         }
     }
 }

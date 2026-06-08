@@ -1,10 +1,11 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
 import com.segurapass.api.ApiClient;
-import com.segurapass.exception.SdkException;
-import com.segurapass.helpers.EncryptionHelper;
-import com.segurapass.models.password_change.PasswordChangeObject;
-import com.segurapass.service.PasswordChangeService;
+import com.segurapass.exception.ApiException;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
+import xyz.segurapass.sdk.helpers.EncryptionHelper;
+import xyz.segurapass.sdk.helpers.PasswordChangeObject;
+import xyz.segurapass.sdk.service.PasswordChangeService;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.digests.SHA256Digest;
@@ -16,10 +17,12 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import static com.segurapass.helpers.SrpHelper.*;
+import static xyz.segurapass.sdk.helpers.SrpHelper.*;
 
 public class PasswordChangeServiceImpl implements PasswordChangeService {
 
@@ -44,7 +47,7 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
             char[] newPassword,
             byte[] vaultKeyBytes,
             UUID deviceId
-    ) throws SdkException {
+    ) throws SegurapassSdkException {
 
         String startEndpoint = baseEndpoint + "/change/start";
         String completeEndpoint = baseEndpoint + "/change/end";
@@ -58,14 +61,16 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
                     Base64.getEncoder().encodeToString(ctx.A().toByteArray())
             );
 
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
             PasswordChangeStartResp startResp = apiClient.sendPostRequest(
                     startReq,
                     startEndpoint,
                     null,
-                    jwtSupplier.get(),
-                    null,
+                    headers,
                     PasswordChangeStartResp.class
-            ).getBody();
+            ).body();
 
             byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
@@ -114,14 +119,14 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
                     completeReq,
                     completeEndpoint,
                     null,
-                    jwtSupplier.get(),
-                    null,
+                    headers,
                     null
             );
-        }  catch (SdkException e) {
-            throw e;
+
+        }  catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         }  catch (Exception e) {
-            throw new SdkException(500, "POST", "Could not change master password", completeEndpoint);
+            throw new SegurapassSdkException(500, "POST", "Could not change master password", completeEndpoint);
         }
     }
 

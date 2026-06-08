@@ -1,12 +1,13 @@
-package com.segurapass.service.impl;
+package xyz.segurapass.sdk.service.impl;
 
-import com.segurapass.helpers.*;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
+import xyz.segurapass.sdk.helpers.*;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import xyz.segurapass.api.authorization.*;
 import com.segurapass.api.ApiClient;
-import com.segurapass.exception.SdkException;
-import com.segurapass.service.AuthorizationService;
+import com.segurapass.exception.ApiException;
+import xyz.segurapass.sdk.service.AuthorizationService;
 import com.segurapass.api.ApiResponse;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.params.SRP6GroupParameters;
@@ -17,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 
-import static com.segurapass.helpers.SrpHelper.*;
+import static xyz.segurapass.sdk.helpers.SrpHelper.*;
 
 public class AuthorizationServiceImpl implements AuthorizationService {
 
@@ -39,6 +40,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         Digest digest = new SHA256Digest();
 
         try(SrpRegisterSession ctx = SrpRegisterSession.create(random, masterPassword)) {
+
             BigInteger x = generateX(
                     digest,
                     ctx.saltAuth(),
@@ -68,12 +70,18 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                     deviceId
             );
 
-            apiClient.sendPostRequest(req, endpoint, null, null, null, null);
+            apiClient.sendPostRequest(
+                    req,
+                    endpoint,
+                    null,
+                    null,
+                    null
+            );
 
-        } catch (SdkException e) {
-            throw e;
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new SdkException(500, "POST", "Could not register", endpoint);
+            throw new SegurapassSdkException(500, "POST", "Could not register", endpoint);
         }
     }
 
@@ -85,6 +93,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         Digest digest = new SHA256Digest();
 
         try(SrpLoginSession ctx = SrpLoginSession.create(random, masterPassword, group)) {
+
             LoginStartReq startReq = new LoginStartReq(
                     email,
                     deviceId,
@@ -96,11 +105,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                     startEndpoint,
                     null,
                     null,
-                    null,
                     LoginStartResp.class
             );
 
-            LoginStartResp startResp = startApiResponse.getBody();
+            LoginStartResp startResp = startApiResponse.body();
 
             byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
@@ -123,7 +131,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                     Base64.getEncoder().encodeToString(M1.toByteArray())
             );
 
-            String requestId = startApiResponse.getHeaders()
+            String requestId = startApiResponse.headers()
                     .firstValue("X-Request-ID")
                     .orElse(null);
             Map<String, String> completeReqHeaders = new HashMap<>();
@@ -133,14 +141,13 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                     completeReq,
                     completeEndpoint,
                     null,
-                    null,
                     completeReqHeaders,
                     LoginCompleteResp.class
-            ).getBody();
+            ).body();
 
             BigInteger clientM2 = generateM2(digest, ctx.A(), B, S, M1);
             if (!clientM2.equals(new BigInteger(1, Base64.getDecoder().decode(completeResp.getM2())))) {
-                throw new SdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
+                throw new SegurapassSdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
             }
 
             SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(ctx.passwordBytes(), Base64.getDecoder().decode(completeResp.getSaltKey()));
@@ -152,10 +159,11 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                     completeResp.getRefreshToken(),
                     completeResp.getRefreshTokenExpiryTime()
             );
-        } catch (SdkException e) {
-            throw e;
+
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new SdkException(500, "POST", "Could not login", completeEndpoint);
+            throw new SegurapassSdkException(500, "POST", "Could not login", completeEndpoint);
         }
     }
 
@@ -170,9 +178,8 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 endpoint,
                 null,
                 null,
-                null,
                 RefreshResp.class
-        ).getBody();
+        ).body();
     }
 
     @Override
@@ -184,7 +191,6 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         apiClient.sendPostRequest(
                 req,
                 endpoint,
-                null,
                 null,
                 null,
                 null

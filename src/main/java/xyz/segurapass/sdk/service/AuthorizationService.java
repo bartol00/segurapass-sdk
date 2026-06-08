@@ -1,19 +1,23 @@
-package com.segurapass.service;
+package xyz.segurapass.sdk.service;
 
-import com.segurapass.helpers.LoginSuccessObject;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
+import xyz.segurapass.sdk.helpers.LoginSuccessObject;
 import xyz.segurapass.api.authorization.RefreshResp;
-import com.segurapass.exception.SdkException;
 
 import java.util.UUID;
 
 public interface AuthorizationService {
 
     void register(String email, char[] masterPassword, UUID deviceId)
-            throws SdkException;
+            throws SegurapassSdkException;
+
     LoginSuccessObject login(String email, char[] masterPassword, UUID deviceId)
-            throws SdkException;
+            throws SegurapassSdkException;
+
     RefreshResp refreshJwt(String refreshToken)
-            throws SdkException;
+            throws SegurapassSdkException;
+
     void logout(String refreshToken)
-            throws SdkException;
+            throws SegurapassSdkException;
+
 }
