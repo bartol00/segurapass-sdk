@@ -25,7 +25,7 @@ public class SegurapassClient {
         this.deletionService = new DeletionServiceImpl(apiClient, jwtSupplier());
         this.keyService = new KeyServiceImpl(apiClient);
         this.passwordChangeService = new PasswordChangeServiceImpl(apiClient, jwtSupplier());
-        this.uptimeService = new UptimeServiceImpl(apiClient);
+        this.uptimeService = new UptimeServiceImpl();
         this.versionService = new VersionServiceImpl(apiClient);
     }
 

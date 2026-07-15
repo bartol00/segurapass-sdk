@@ -7,16 +7,15 @@ import xyz.segurapass.sdk.service.UptimeService;
 
 public class UptimeServiceImpl implements UptimeService {
 
-    private final ApiClient apiClient;
     private final String baseEndpoint;
 
-    public UptimeServiceImpl(ApiClient apiClient) {
-        this.apiClient = apiClient;
+    public UptimeServiceImpl() {
         this.baseEndpoint = "/api/uptime";
     }
 
     @Override
-    public boolean getUptime() throws SegurapassSdkException {
+    public boolean getUptime(String serverUrl) throws SegurapassSdkException {
+        ApiClient apiClient = new ApiClient(serverUrl);
         ApiResponse<Void> uptimeResponse = apiClient.sendGetRequest(
                 baseEndpoint,
                 null,
