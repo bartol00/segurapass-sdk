@@ -150,8 +150,15 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 throw new SegurapassSdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
             }
 
-            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(ctx.passwordBytes(), Base64.getDecoder().decode(completeResp.getSaltKey()));
-            byte[] vaultKey = EncryptionHelper.decryptField(Base64.getDecoder().decode(completeResp.getVaultKey()), Base64.getDecoder().decode(completeResp.getIvVaultKey()), masterPasswordKey);
+            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
+                    ctx.passwordBytes(),
+                    Base64.getDecoder().decode(completeResp.getSaltKey())
+            );
+            byte[] vaultKey = EncryptionHelper.decryptField(
+                    Base64.getDecoder().decode(completeResp.getVaultKey()),
+                    Base64.getDecoder().decode(completeResp.getIvVaultKey()),
+                    masterPasswordKey
+            );
 
             return new LoginSuccessObject(
                     vaultKey,
