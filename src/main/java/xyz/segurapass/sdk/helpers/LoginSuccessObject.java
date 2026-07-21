@@ -10,7 +10,9 @@ import java.util.Arrays;
 public final class LoginSuccessObject {
 
     private byte[] vaultKey;
+    @Getter
     private PrivateKey privateSigningKey;
+    @Getter
     private PublicKey publicSigningKey;
     @Getter
     private final String accessToken;

@@ -15,6 +15,7 @@ import xyz.segurapass.api.password.*;
 import javax.crypto.SecretKey;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
@@ -46,6 +47,7 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
             char[] oldPassword,
             char[] newPassword,
             byte[] vaultKeyBytes,
+            PrivateKey privateSigningKey,
             UUID deviceId
     ) throws SegurapassSdkException {
 
@@ -54,7 +56,7 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
 
         Digest digest = new SHA256Digest();
 
-        try(PasswordChangeObject ctx = PasswordChangeObject.create(random, oldPassword, newPassword, vaultKeyBytes, group)) {
+        try(PasswordChangeObject ctx = PasswordChangeObject.create(random, oldPassword, newPassword, vaultKeyBytes, privateSigningKey, group)) {
 
             PasswordChangeStartReq startReq = new PasswordChangeStartReq(
                     deviceId,
@@ -98,11 +100,35 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
             BigInteger newVerifier = generateVerifier(newX);
             validateVerifier(newVerifier, completeEndpoint);
 
-            byte[] encryptedVaultKey = encryptVaultKey(
+            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
                     ctx.newPasswordBytes(),
-                    ctx.newSaltKey(),
+                    ctx.newSaltKey()
+            );
+
+            String vaultWrappingInfo = "segurapass-vault-wrap";
+            SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                    masterPasswordKey,
+                    ctx.newSaltHkdf(),
+                    vaultWrappingInfo
+            );
+
+            String signingWrappingInfo = "segurapass-signing-wrap";
+            SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                    masterPasswordKey,
+                    ctx.newSaltHkdf(),
+                    signingWrappingInfo
+            );
+
+            byte[] encryptedVaultKey = EncryptionHelper.encryptField(
                     ctx.vaultKeyBytes(),
-                    ctx.newVaultKeyIv()
+                    ctx.newVaultKeyIv(),
+                    vaultWrappingKey
+            );
+
+            byte[] encryptedSigningKey = EncryptionHelper.encryptField(
+                    EncryptionHelper.getPrivateSigningKeyBytes(ctx.privateSigningKey()),
+                    ctx.newPrivateSigningKeyIv(),
+                    signingWrappingKey
             );
 
             PasswordChangeCompleteReq completeReq = new PasswordChangeCompleteReq(
@@ -112,7 +138,10 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
                     Base64.getEncoder().encodeToString(newVerifier.toByteArray()),
                     Base64.getEncoder().encodeToString(encryptedVaultKey),
                     Base64.getEncoder().encodeToString(ctx.newVaultKeyIv()),
-                    Base64.getEncoder().encodeToString(ctx.newSaltKey())
+                    Base64.getEncoder().encodeToString(ctx.newSaltKey()),
+                    Base64.getEncoder().encodeToString(ctx.newSaltHkdf()),
+                    Base64.getEncoder().encodeToString(encryptedSigningKey),
+                    Base64.getEncoder().encodeToString(ctx.newPrivateSigningKeyIv())
             );
 
             apiClient.sendPostRequest(
@@ -130,8 +159,4 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
         }
     }
 
-    private byte[] encryptVaultKey(byte[] passwordBytes, byte[] salt, byte[] vaultKey, byte[] vaultKeyIv) throws Exception {
-        SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(passwordBytes, salt);
-        return EncryptionHelper.encryptField(vaultKey, vaultKeyIv, masterPasswordKey);
-    }
 }
