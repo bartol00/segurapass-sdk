@@ -14,10 +14,10 @@ public interface CredentialsService {
     DecryptedCredential addCredential(String website, String username, String password, byte[] vaultKeyBytes, PrivateKey signingKey)
             throws SegurapassSdkException;
 
-    DecryptedCredential updateCredential(String credentialId, String website, String username, String password, byte[] vaultKeyBytes)
+    DecryptedCredential updateCredential(String credentialId, String website, String username, String password, byte[] vaultKeyBytes, PrivateKey signingKey)
             throws SegurapassSdkException;
 
-    void deleteCredential(String credentialId)
+    void deleteCredential(String credentialId, PrivateKey signingKey)
             throws SegurapassSdkException;
 
 }

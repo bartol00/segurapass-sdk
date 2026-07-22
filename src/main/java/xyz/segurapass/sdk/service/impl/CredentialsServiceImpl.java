@@ -136,26 +136,39 @@ public class CredentialsServiceImpl implements CredentialsService {
             String website,
             String username,
             String password,
-            byte[] vaultKeyBytes
+            byte[] vaultKeyBytes,
+            PrivateKey signingKey
     ) {
-        String endpoint = baseEndpoint + "/update/" + credentialId;
+        String startEndpoint = baseEndpoint + "/update/start/" + credentialId;
+        String endEndpoint = baseEndpoint + "/update/end/" + credentialId;
 
         try(CredentialsObject ctx = new CredentialsObject(vaultKeyBytes)) {
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
+            NonceResp nonceResp = apiClient.sendGetRequest(
+                    startEndpoint,
+                    null,
+                    headers,
+                    NonceResp.class
+            ).body();
 
             CredentialsReq req = encryptCredentials(
                     website,
                     username,
                     password,
                     ctx.vaultKey(),
-                    endpoint
+                    endEndpoint
             );
+            req.setNonce(nonceResp.getNonce());
+            req.setOperation(CredentialsOperation.UPDATE);
 
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+            headers.put("X-SeguraPass-Signature", createSignature(req, UUID.fromString(credentialId), signingKey));
 
             CredentialsRespSdk credentialsRespSdk = apiClient.sendPutRequest(
                     req,
-                    endpoint,
+                    endEndpoint,
                     null,
                     headers,
                     CredentialsRespSdk.class
@@ -171,22 +184,43 @@ public class CredentialsServiceImpl implements CredentialsService {
                     false
             );
 
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public void deleteCredential(String credentialId) {
-        String endpoint = baseEndpoint + "/delete/" + credentialId;
+    public void deleteCredential(String credentialId, PrivateKey signingKey) {
+        String startEndpoint = baseEndpoint + "/delete/start/" + credentialId;
+        String endEndpoint = baseEndpoint + "/delete/end/" + credentialId;
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", "Bearer " + jwtSupplier.get());
+        try {
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
 
-        apiClient.sendDeleteRequest(
-                endpoint,
-                null,
-                headers,
-                null
-        );
+            NonceResp nonceResp = apiClient.sendGetRequest(
+                    startEndpoint,
+                    null,
+                    headers,
+                    NonceResp.class
+            ).body();
+
+            CredentialsReq req = new CredentialsReq();
+            req.setNonce(nonceResp.getNonce());
+            req.setOperation(CredentialsOperation.DELETE);
+
+            headers.put("X-SeguraPass-Signature", createSignature(req, UUID.fromString(credentialId), signingKey));
+
+            apiClient.sendPostRequest(
+                    req,
+                    endEndpoint,
+                    null,
+                    headers,
+                    null
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private DecryptedCredentials decryptCredentials(
