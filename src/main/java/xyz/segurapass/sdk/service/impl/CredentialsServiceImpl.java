@@ -1,8 +1,10 @@
 package xyz.segurapass.sdk.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import xyz.segurapass.sdk.exception.SegurapassSdkException;
 import xyz.segurapass.sdk.helpers.CredentialsObject;
 import xyz.segurapass.sdk.helpers.EncryptionHelper;
+import xyz.segurapass.sdk.helpers.JsonHelper;
 import xyz.segurapass.sdk.models.DecryptedCredential;
 import xyz.segurapass.sdk.models.DecryptedCredentials;
 import xyz.segurapass.api.credentials.*;
@@ -12,7 +14,7 @@ import xyz.segurapass.sdk.service.CredentialsService;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
+import java.security.*;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -75,26 +77,39 @@ public class CredentialsServiceImpl implements CredentialsService {
             String website,
             String username,
             String password,
-            byte[] vaultKeyBytes
+            byte[] vaultKeyBytes,
+            PrivateKey signingKey
     ) {
-        String endpoint = baseEndpoint + "/create";
+        String startEndpoint = baseEndpoint + "/create/start";
+        String endEndpoint = baseEndpoint + "/create/end";
 
         try(CredentialsObject ctx = new CredentialsObject(vaultKeyBytes)) {
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+
+            NonceResp nonceResp = apiClient.sendGetRequest(
+                    startEndpoint,
+                    null,
+                    headers,
+                    NonceResp.class
+            ).body();
 
             CredentialsReq req = encryptCredentials(
                     website,
                     username,
                     password,
                     ctx.vaultKey(),
-                    endpoint
+                    endEndpoint
             );
+            req.setNonce(nonceResp.getNonce());
+            req.setOperation(CredentialsOperation.CREATE);
 
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Authorization", "Bearer " + jwtSupplier.get());
+            headers.put("X-SeguraPass-Signature", createSignature(req, null, signingKey));
 
             CredentialsRespSdk credentialsRespSdk = apiClient.sendPostRequest(
                     req,
-                    endpoint,
+                    endEndpoint,
                     null,
                     headers,
                     CredentialsRespSdk.class
@@ -110,6 +125,8 @@ public class CredentialsServiceImpl implements CredentialsService {
                     false
             );
 
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -280,5 +297,32 @@ public class CredentialsServiceImpl implements CredentialsService {
         } catch (Exception e) {
             throw new SegurapassSdkException(500, "POST", "Could not encrypt credentials", endpoint);
         }
+    }
+
+    private String createSignature(CredentialsReq req, UUID credentialsId, PrivateKey privateKey)
+            throws JsonProcessingException, NoSuchAlgorithmException, InvalidKeyException, SignatureException
+    {
+        CredentialsWritePayload payload =
+                new CredentialsWritePayload(
+                        req.getWebsite(),
+                        req.getUsername(),
+                        req.getPassword(),
+                        req.getIvWebsite(),
+                        req.getIvUsername(),
+                        req.getIvPassword(),
+                        req.getNonce(),
+                        req.getOperation(),
+                        credentialsId
+                );
+
+        byte[] payloadBytes = JsonHelper.OBJECT_MAPPER.writeValueAsBytes(payload);
+
+        Signature signer = Signature.getInstance("Ed25519");
+        signer.initSign(privateKey);
+        signer.update(payloadBytes);
+
+        byte[] signatureBytes = signer.sign();
+
+        return Base64.getEncoder().encodeToString(signatureBytes);
     }
 }
