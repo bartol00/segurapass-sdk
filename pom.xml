@@ -40,12 +40,13 @@
 
         <!-- SeguraPass -->
         <api-client.version>2.0.1</api-client.version>
-        <segurapass-api.version>2.0.0</segurapass-api.version>
+        <segurapass-api.version>3.0.0</segurapass-api.version>
 
         <!-- 3rd Party -->
         <lombok.version>1.18.46</lombok.version>
         <bouncycastle.version>1.84</bouncycastle.version>
         <java-jwt.version>4.5.2</java-jwt.version>
+        <junit.version>6.1.1</junit.version>
     </properties>
 
     <dependencies>
@@ -82,6 +83,14 @@
             <artifactId>java-jwt</artifactId>
             <version>${java-jwt.version}</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

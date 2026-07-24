@@ -2,6 +2,7 @@ package xyz.segurapass.sdk.service;
 
 import xyz.segurapass.sdk.exception.SegurapassSdkException;
 
+import java.security.PrivateKey;
 import java.util.UUID;
 
 public interface PasswordChangeService {
@@ -11,6 +12,7 @@ public interface PasswordChangeService {
             char[] oldPassword,
             char[] newPassword,
             byte[] vaultKeyBytes,
+            PrivateKey privateSigningKey,
             UUID deviceId
     ) throws SegurapassSdkException;
 

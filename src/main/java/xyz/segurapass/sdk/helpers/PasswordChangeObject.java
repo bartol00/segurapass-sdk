@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -13,11 +14,14 @@ public final class PasswordChangeObject implements AutoCloseable {
 
     private byte[] passwordBytes;
     private byte[] vaultKeyBytes;
+    private PrivateKey privateSigningKey;
     private BigInteger a;
     private BigInteger A;
     private byte[] newSaltAuth;
     private byte[] newVaultKeyIv;
     private byte[] newSaltKey;
+    private byte[] newSaltHkdf;
+    private byte[] newPrivateSigningKeyIv;
     private byte[] newPasswordBytes;
 
     public static PasswordChangeObject create(
@@ -25,6 +29,7 @@ public final class PasswordChangeObject implements AutoCloseable {
             char[] password,
             char[] newPassword,
             byte[] vaultKeyBytes,
+            PrivateKey privateSigningKey,
             SRP6GroupParameters group
     ) {
         PasswordChangeObject object = new PasswordChangeObject();
@@ -38,16 +43,21 @@ public final class PasswordChangeObject implements AutoCloseable {
         newBb.get(object.newPasswordBytes);
 
         object.vaultKeyBytes = vaultKeyBytes;
+        object.privateSigningKey = privateSigningKey;
 
         object.a = new BigInteger(256, random);
         object.A = group.getG().modPow(object.a, group.getN());
 
         object.newSaltAuth = new byte[16];
         object.newSaltKey = new byte[16];
+        object.newSaltHkdf = new byte[16];
         object.newVaultKeyIv = new byte[12];
+        object.newPrivateSigningKeyIv = new byte[12];
         random.nextBytes(object.newSaltAuth);
         random.nextBytes(object.newSaltKey);
+        random.nextBytes(object.newSaltHkdf);
         random.nextBytes(object.newVaultKeyIv);
+        random.nextBytes(object.newPrivateSigningKeyIv);
 
         return object;
     }
@@ -69,10 +79,13 @@ public final class PasswordChangeObject implements AutoCloseable {
 
     public byte[] passwordBytes() { return passwordBytes; }
     public byte[] vaultKeyBytes() { return vaultKeyBytes; }
+    public PrivateKey privateSigningKey() { return privateSigningKey; }
     public BigInteger a() { return a; }
     public BigInteger A() { return A; }
     public byte[] newSaltAuth() { return newSaltAuth; }
     public byte[] newVaultKeyIv() { return newVaultKeyIv; }
     public byte[] newSaltKey() { return newSaltKey; }
+    public byte[] newSaltHkdf() { return newSaltHkdf; }
+    public byte[] newPrivateSigningKeyIv() { return newPrivateSigningKeyIv; }
     public byte[] newPasswordBytes() { return newPasswordBytes; }
 }
