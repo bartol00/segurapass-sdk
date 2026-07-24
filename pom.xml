@@ -40,7 +40,7 @@
 
         <!-- SeguraPass -->
         <api-client.version>2.0.1</api-client.version>
-        <segurapass-api.version>2.0.1-SNAPSHOT</segurapass-api.version>
+        <segurapass-api.version>3.0.0</segurapass-api.version>
 
         <!-- 3rd Party -->
         <lombok.version>1.18.46</lombok.version>
