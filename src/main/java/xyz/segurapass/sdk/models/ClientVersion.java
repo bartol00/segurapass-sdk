@@ -4,10 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class VersionModel {
+public class ClientVersion {
     private String appVersion;
-    private String protocolVersion;
+    private Integer protocolVersion;
+    private String sha256;
+    private Instant releaseDate;
 }
