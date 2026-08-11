@@ -16,6 +16,7 @@ public class SegurapassClient {
     private final DeletionService deletionService;
     private final KeyService keyService;
     private final PasswordChangeService passwordChangeService;
+    private final TotpService totpService;
     private final UptimeService uptimeService;
     private final VersionService versionService;
 
@@ -25,6 +26,7 @@ public class SegurapassClient {
         this.deletionService = new DeletionServiceImpl(apiClient, jwtSupplier());
         this.keyService = new KeyServiceImpl(apiClient);
         this.passwordChangeService = new PasswordChangeServiceImpl(apiClient, jwtSupplier());
+        this.totpService = new TotpServiceImpl(apiClient, jwtSupplier());
         this.uptimeService = new UptimeServiceImpl();
         this.versionService = new VersionServiceImpl(apiClient);
     }
@@ -51,6 +53,10 @@ public class SegurapassClient {
 
     public PasswordChangeService passwordChange() {
         return passwordChangeService;
+    }
+
+    public TotpService totp() {
+        return totpService;
     }
 
     public UptimeService uptime() {

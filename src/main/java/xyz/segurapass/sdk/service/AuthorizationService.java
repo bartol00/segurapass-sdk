@@ -10,7 +10,7 @@ public interface AuthorizationService {
     void register(String email, char[] masterPassword, UUID deviceId)
             throws SegurapassSdkException;
 
-    LoginSuccessObject login(String email, char[] masterPassword, UUID deviceId)
+    Object login(String email, char[] masterPassword, UUID deviceId)
             throws SegurapassSdkException;
 
     String refreshJwt(String refreshToken)

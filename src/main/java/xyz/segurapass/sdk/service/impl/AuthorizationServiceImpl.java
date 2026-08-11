@@ -113,7 +113,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
-    public LoginSuccessObject login(String email, char[] masterPassword, UUID deviceId) {
+    public Object login(String email, char[] masterPassword, UUID deviceId) {
         String startEndpoint = baseEndpoint + "/login/start";
         String completeEndpoint = baseEndpoint + "/login/end";
 
@@ -177,47 +177,11 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 throw new SegurapassSdkException(500, "POST", "M2 mismatch, cannot verify server authenticity", completeEndpoint);
             }
 
-            SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
-                    ctx.passwordBytes(),
-                    Base64.getDecoder().decode(completeResp.getSaltKey())
-            );
-
-            SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                    masterPasswordKey,
-                    Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                    vaultWrappingInfo
-            );
-
-            SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                    masterPasswordKey,
-                    Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                    signingWrappingInfo
-            );
-
-            byte[] vaultKey = EncryptionHelper.decryptField(
-                    Base64.getDecoder().decode(completeResp.getVaultKey()),
-                    Base64.getDecoder().decode(completeResp.getIvVaultKey()),
-                    vaultWrappingKey
-            );
-
-            byte[] privateSigningKeyBytes = EncryptionHelper.decryptField(
-                    Base64.getDecoder().decode(completeResp.getPrivateSigningKey()),
-                    Base64.getDecoder().decode(completeResp.getIvPrivateSigningKey()),
-                    signingWrappingKey
-            );
-            PrivateKey privateSigningKey = EncryptionHelper.getPrivateSigningKeyFromBytes(privateSigningKeyBytes);
-            PublicKey publicSigningKey = EncryptionHelper.getPublicSigningKeyFromBytes(
-                    Base64.getDecoder().decode(completeResp.getPublicSigningKey())
-            );
-
-            return new LoginSuccessObject(
-                    vaultKey,
-                    privateSigningKey,
-                    publicSigningKey,
-                    completeResp.getAccessToken(),
-                    completeResp.getRefreshToken(),
-                    completeResp.getRefreshTokenExpiryTime()
-            );
+            if (completeResp.getTotpCode() != null) {
+                return completeResp;
+            } else {
+                return loginWithoutMfa(ctx, completeResp);
+            }
 
         } catch (ApiException e) {
             throw new SegurapassSdkException(e);
@@ -255,4 +219,53 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 null
         );
     }
+
+    private LoginSuccessObject loginWithoutMfa(
+            SrpLoginSession ctx,
+            LoginCompleteResp completeResp
+    ) throws Exception {
+
+        SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
+                ctx.passwordBytes(),
+                Base64.getDecoder().decode(completeResp.getSaltKey())
+        );
+
+        SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                masterPasswordKey,
+                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
+                vaultWrappingInfo
+        );
+
+        SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                masterPasswordKey,
+                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
+                signingWrappingInfo
+        );
+
+        byte[] vaultKey = EncryptionHelper.decryptField(
+                Base64.getDecoder().decode(completeResp.getVaultKey()),
+                Base64.getDecoder().decode(completeResp.getIvVaultKey()),
+                vaultWrappingKey
+        );
+
+        byte[] privateSigningKeyBytes = EncryptionHelper.decryptField(
+                Base64.getDecoder().decode(completeResp.getPrivateSigningKey()),
+                Base64.getDecoder().decode(completeResp.getIvPrivateSigningKey()),
+                signingWrappingKey
+        );
+        PrivateKey privateSigningKey = EncryptionHelper.getPrivateSigningKeyFromBytes(privateSigningKeyBytes);
+        PublicKey publicSigningKey = EncryptionHelper.getPublicSigningKeyFromBytes(
+                Base64.getDecoder().decode(completeResp.getPublicSigningKey())
+        );
+
+        return new LoginSuccessObject(
+                vaultKey,
+                privateSigningKey,
+                publicSigningKey,
+                completeResp.getAccessToken(),
+                completeResp.getRefreshToken(),
+                completeResp.getRefreshTokenExpiryTime()
+        );
+    }
+
 }
