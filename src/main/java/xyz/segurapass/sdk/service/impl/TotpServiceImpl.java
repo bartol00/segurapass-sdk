@@ -2,12 +2,18 @@ package xyz.segurapass.sdk.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.segurapass.api.ApiClient;
+import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
+import org.bouncycastle.crypto.params.SRP6GroupParameters;
 import xyz.segurapass.api.authorization.LoginCompleteResp;
 import xyz.segurapass.api.credentials.NonceResp;
 import xyz.segurapass.api.mfa.*;
+import xyz.segurapass.sdk.helpers.EncryptionHelper;
 import xyz.segurapass.sdk.helpers.JsonHelper;
+import xyz.segurapass.sdk.helpers.LoginSuccessObject;
+import xyz.segurapass.sdk.helpers.SrpLoginSession;
 import xyz.segurapass.sdk.service.TotpService;
 
+import javax.crypto.SecretKey;
 import java.security.*;
 import java.util.Base64;
 import java.util.HashMap;
@@ -18,11 +24,16 @@ public class TotpServiceImpl implements TotpService {
 
     private final ApiClient apiClient;
     private final Supplier<String> jwtSupplier;
+    private final SRP6GroupParameters group;
     private final String baseEndpoint;
+    private final SecureRandom random = new SecureRandom();
+    private final String vaultWrappingInfo = "segurapass-vault-wrap";
+    private final String signingWrappingInfo = "segurapass-signing-wrap";
 
     public TotpServiceImpl(ApiClient apiClient, Supplier<String> jwtSupplier) {
         this.apiClient = apiClient;
         this.jwtSupplier = jwtSupplier;
+        this.group = SRP6StandardGroups.rfc5054_3072;
         this.baseEndpoint = "/api/mfa";
     }
 
@@ -125,20 +136,25 @@ public class TotpServiceImpl implements TotpService {
     }
 
     @Override
-    public LoginCompleteResp loginTotp(String code, String otp) {
+    public LoginSuccessObject loginTotp(String code, String otp, char[] masterPassword) {
         String endpoint = baseEndpoint + "/login-totp/" + code;
 
-        try {
+        try(SrpLoginSession ctx = SrpLoginSession.create(random, masterPassword, group)) {
 
             TotpVerifyReq req = new TotpVerifyReq(otp);
 
-            return apiClient.sendPostRequest(
+            LoginCompleteResp resp = apiClient.sendPostRequest(
                     req,
                     endpoint,
                     null,
                     null,
                     LoginCompleteResp.class
             ).body();
+
+            return getLoginSuccessObject(
+                    ctx,
+                    resp
+            );
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -146,20 +162,25 @@ public class TotpServiceImpl implements TotpService {
     }
 
     @Override
-    public LoginCompleteResp recoveryTotp(String code, String recoveryCode) {
+    public LoginSuccessObject recoveryTotp(String code, String recoveryCode, char[] masterPassword) {
         String endpoint = baseEndpoint + "/recovery-totp/" + code;
 
-        try {
+        try(SrpLoginSession ctx = SrpLoginSession.create(random, masterPassword, group)) {
 
             TotpRecoveryReq req = new TotpRecoveryReq(recoveryCode);
 
-            return apiClient.sendPostRequest(
+            LoginCompleteResp resp = apiClient.sendPostRequest(
                     req,
                     endpoint,
                     null,
                     null,
                     LoginCompleteResp.class
             ).body();
+
+            return getLoginSuccessObject(
+                    ctx,
+                    resp
+            );
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -184,6 +205,54 @@ public class TotpServiceImpl implements TotpService {
         byte[] signatureBytes = signer.sign();
 
         return Base64.getEncoder().encodeToString(signatureBytes);
+    }
+
+    private LoginSuccessObject getLoginSuccessObject(
+            SrpLoginSession ctx,
+            LoginCompleteResp completeResp
+    ) throws Exception {
+
+        SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
+                ctx.passwordBytes(),
+                Base64.getDecoder().decode(completeResp.getSaltKey())
+        );
+
+        SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                masterPasswordKey,
+                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
+                vaultWrappingInfo
+        );
+
+        SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
+                masterPasswordKey,
+                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
+                signingWrappingInfo
+        );
+
+        byte[] vaultKey = EncryptionHelper.decryptField(
+                Base64.getDecoder().decode(completeResp.getVaultKey()),
+                Base64.getDecoder().decode(completeResp.getIvVaultKey()),
+                vaultWrappingKey
+        );
+
+        byte[] privateSigningKeyBytes = EncryptionHelper.decryptField(
+                Base64.getDecoder().decode(completeResp.getPrivateSigningKey()),
+                Base64.getDecoder().decode(completeResp.getIvPrivateSigningKey()),
+                signingWrappingKey
+        );
+        PrivateKey privateSigningKey = EncryptionHelper.getPrivateSigningKeyFromBytes(privateSigningKeyBytes);
+        PublicKey publicSigningKey = EncryptionHelper.getPublicSigningKeyFromBytes(
+                Base64.getDecoder().decode(completeResp.getPublicSigningKey())
+        );
+
+        return new LoginSuccessObject(
+                vaultKey,
+                privateSigningKey,
+                publicSigningKey,
+                completeResp.getAccessToken(),
+                completeResp.getRefreshToken(),
+                completeResp.getRefreshTokenExpiryTime()
+        );
     }
 
 }
