@@ -234,26 +234,19 @@ public class CredentialsServiceImpl implements CredentialsService {
         try {
 
             for (CredentialsRespSdk encryptedCredential : encryptedCredentials) {
-                String encryptedWebsite = encryptedCredential.getWebsite();
-                String websiteIv = encryptedCredential.getIvWebsite();
-                String encryptedUsername = encryptedCredential.getUsername();
-                String usernameIv = encryptedCredential.getIvUsername();
-                String encryptedPassword = encryptedCredential.getPassword();
-                String passwordIv = encryptedCredential.getIvPassword();
-
                 byte[] plaintextWebsite = EncryptionHelper.decryptField(
-                        Base64.getDecoder().decode(encryptedWebsite),
-                        Base64.getDecoder().decode(websiteIv),
+                        encryptedCredential.getWebsite(),
+                        encryptedCredential.getIvWebsite(),
                         vaultKey
                 );
                 byte[] plaintextUsername = EncryptionHelper.decryptField(
-                        Base64.getDecoder().decode(encryptedUsername),
-                        Base64.getDecoder().decode(usernameIv),
+                        encryptedCredential.getUsername(),
+                        encryptedCredential.getIvUsername(),
                         vaultKey
                 );
                 byte[] plaintextPassword = EncryptionHelper.decryptField(
-                        Base64.getDecoder().decode(encryptedPassword),
-                        Base64.getDecoder().decode(passwordIv),
+                        encryptedCredential.getPassword(),
+                        encryptedCredential.getIvPassword(),
                         vaultKey
                 );
                 DecryptedCredential decryptedCredential = new DecryptedCredential(
@@ -302,8 +295,8 @@ public class CredentialsServiceImpl implements CredentialsService {
                         websiteIv,
                         vaultKey
                 );
-                credentialsReq.setWebsite(Base64.getEncoder().encodeToString(encryptedWebsite));
-                credentialsReq.setIvWebsite(Base64.getEncoder().encodeToString(websiteIv));
+                credentialsReq.setWebsiteBytes(encryptedWebsite);
+                credentialsReq.setIvWebsiteBytes(websiteIv);
             }
 
             if (username != null && !username.isBlank()) {
@@ -312,8 +305,8 @@ public class CredentialsServiceImpl implements CredentialsService {
                         usernameIv,
                         vaultKey
                 );
-                credentialsReq.setUsername(Base64.getEncoder().encodeToString(encryptedUsername));
-                credentialsReq.setIvUsername(Base64.getEncoder().encodeToString(usernameIv));
+                credentialsReq.setUsernameBytes(encryptedUsername);
+                credentialsReq.setIvUsernameBytes(usernameIv);
             }
 
             if (password != null && !password.isBlank()) {
@@ -322,8 +315,8 @@ public class CredentialsServiceImpl implements CredentialsService {
                         passwordIv,
                         vaultKey
                 );
-                credentialsReq.setPassword(Base64.getEncoder().encodeToString(encryptedPassword));
-                credentialsReq.setIvPassword(Base64.getEncoder().encodeToString(passwordIv));
+                credentialsReq.setPasswordBytes(encryptedPassword);
+                credentialsReq.setIvPasswordBytes(passwordIv);
             }
 
             return credentialsReq;
@@ -338,12 +331,12 @@ public class CredentialsServiceImpl implements CredentialsService {
     {
         CredentialsWritePayload payload =
                 new CredentialsWritePayload(
-                        req.getWebsite(),
-                        req.getUsername(),
-                        req.getPassword(),
-                        req.getIvWebsite(),
-                        req.getIvUsername(),
-                        req.getIvPassword(),
+                        req.getWebsiteBytes(),
+                        req.getUsernameBytes(),
+                        req.getPasswordBytes(),
+                        req.getIvWebsiteBytes(),
+                        req.getIvUsernameBytes(),
+                        req.getIvPasswordBytes(),
                         req.getNonce(),
                         req.getOperation(),
                         credentialsId

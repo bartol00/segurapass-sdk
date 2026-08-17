@@ -7,18 +7,18 @@ import org.bouncycastle.crypto.params.SRP6GroupParameters;
 import xyz.segurapass.api.authorization.LoginCompleteResp;
 import xyz.segurapass.api.credentials.NonceResp;
 import xyz.segurapass.api.mfa.*;
-import xyz.segurapass.sdk.helpers.EncryptionHelper;
 import xyz.segurapass.sdk.helpers.JsonHelper;
 import xyz.segurapass.sdk.helpers.LoginSuccessObject;
 import xyz.segurapass.sdk.helpers.SrpLoginSession;
 import xyz.segurapass.sdk.service.TotpService;
 
-import javax.crypto.SecretKey;
 import java.security.*;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import static xyz.segurapass.sdk.helpers.LoginHelper.*;
 
 public class TotpServiceImpl implements TotpService {
 
@@ -27,8 +27,6 @@ public class TotpServiceImpl implements TotpService {
     private final SRP6GroupParameters group;
     private final String baseEndpoint;
     private final SecureRandom random = new SecureRandom();
-    private final String vaultWrappingInfo = "segurapass-vault-wrap";
-    private final String signingWrappingInfo = "segurapass-signing-wrap";
 
     public TotpServiceImpl(ApiClient apiClient, Supplier<String> jwtSupplier) {
         this.apiClient = apiClient;
@@ -205,54 +203,6 @@ public class TotpServiceImpl implements TotpService {
         byte[] signatureBytes = signer.sign();
 
         return Base64.getEncoder().encodeToString(signatureBytes);
-    }
-
-    private LoginSuccessObject getLoginSuccessObject(
-            SrpLoginSession ctx,
-            LoginCompleteResp completeResp
-    ) throws Exception {
-
-        SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
-                ctx.passwordBytes(),
-                Base64.getDecoder().decode(completeResp.getSaltKey())
-        );
-
-        SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                masterPasswordKey,
-                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                vaultWrappingInfo
-        );
-
-        SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                masterPasswordKey,
-                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                signingWrappingInfo
-        );
-
-        byte[] vaultKey = EncryptionHelper.decryptField(
-                Base64.getDecoder().decode(completeResp.getVaultKey()),
-                Base64.getDecoder().decode(completeResp.getIvVaultKey()),
-                vaultWrappingKey
-        );
-
-        byte[] privateSigningKeyBytes = EncryptionHelper.decryptField(
-                Base64.getDecoder().decode(completeResp.getPrivateSigningKey()),
-                Base64.getDecoder().decode(completeResp.getIvPrivateSigningKey()),
-                signingWrappingKey
-        );
-        PrivateKey privateSigningKey = EncryptionHelper.getPrivateSigningKeyFromBytes(privateSigningKeyBytes);
-        PublicKey publicSigningKey = EncryptionHelper.getPublicSigningKeyFromBytes(
-                Base64.getDecoder().decode(completeResp.getPublicSigningKey())
-        );
-
-        return new LoginSuccessObject(
-                vaultKey,
-                privateSigningKey,
-                publicSigningKey,
-                completeResp.getAccessToken(),
-                completeResp.getRefreshToken(),
-                completeResp.getRefreshTokenExpiryTime()
-        );
     }
 
 }
