@@ -15,12 +15,12 @@ import org.bouncycastle.crypto.params.SRP6GroupParameters;
 import javax.crypto.SecretKey;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.*;
 
 import static xyz.segurapass.sdk.helpers.SrpHelper.*;
+import static xyz.segurapass.sdk.helpers.LoginHelper.*;
+import static xyz.segurapass.sdk.helpers.WrappingInfoConstants.*;
 
 public class AuthorizationServiceImpl implements AuthorizationService {
 
@@ -28,8 +28,6 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     private final SRP6GroupParameters group;
     private final String baseEndpoint;
     private final SecureRandom random = new SecureRandom();
-    private final String vaultWrappingInfo = "segurapass-vault-wrap";
-    private final String signingWrappingInfo = "segurapass-signing-wrap";
 
     public AuthorizationServiceImpl(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -85,15 +83,15 @@ public class AuthorizationServiceImpl implements AuthorizationService {
 
             RegistrationReq req = new RegistrationReq(
                     email,
-                    Base64.getEncoder().encodeToString(ctx.saltAuth()),
+                    ctx.saltAuth(),
                     Base64.getEncoder().encodeToString(verifier.toByteArray()),
-                    Base64.getEncoder().encodeToString(encryptedVaultKey),
-                    Base64.getEncoder().encodeToString(ctx.vaultKeyIv()),
-                    Base64.getEncoder().encodeToString(ctx.saltKey()),
-                    Base64.getEncoder().encodeToString(ctx.saltHkdf()),
-                    Base64.getEncoder().encodeToString(encryptedSigningKey),
-                    Base64.getEncoder().encodeToString(ctx.publicSigningKey()),
-                    Base64.getEncoder().encodeToString(ctx.privateSigningKeyIv()),
+                    encryptedVaultKey,
+                    ctx.vaultKeyIv(),
+                    ctx.saltKey(),
+                    ctx.saltHkdf(),
+                    encryptedSigningKey,
+                    ctx.publicSigningKey(),
+                    ctx.privateSigningKeyIv(),
                     deviceId
             );
 
@@ -137,7 +135,6 @@ public class AuthorizationServiceImpl implements AuthorizationService {
 
             LoginStartResp startResp = startApiResponse.body();
 
-            byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
 
             validatePublicValue(ctx.A(), "A", startEndpoint);
@@ -145,7 +142,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
 
             BigInteger x = generateX(
                     digest,
-                    saltAuth,
+                    startResp.getSaltAuth(),
                     email.getBytes(StandardCharsets.UTF_8),
                     ctx.passwordBytes()
             );
@@ -180,7 +177,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
             if (completeResp.getTotpCode() != null) {
                 return completeResp;
             } else {
-                return loginWithoutMfa(ctx, completeResp);
+                return getLoginSuccessObject(ctx, completeResp);
             }
 
         } catch (ApiException e) {
@@ -217,54 +214,6 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 null,
                 null,
                 null
-        );
-    }
-
-    private LoginSuccessObject loginWithoutMfa(
-            SrpLoginSession ctx,
-            LoginCompleteResp completeResp
-    ) throws Exception {
-
-        SecretKey masterPasswordKey = EncryptionHelper.generateMasterPasswordKey(
-                ctx.passwordBytes(),
-                Base64.getDecoder().decode(completeResp.getSaltKey())
-        );
-
-        SecretKey vaultWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                masterPasswordKey,
-                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                vaultWrappingInfo
-        );
-
-        SecretKey signingWrappingKey = EncryptionHelper.deriveKeyHkdf(
-                masterPasswordKey,
-                Base64.getDecoder().decode(completeResp.getSaltHkdf()),
-                signingWrappingInfo
-        );
-
-        byte[] vaultKey = EncryptionHelper.decryptField(
-                Base64.getDecoder().decode(completeResp.getVaultKey()),
-                Base64.getDecoder().decode(completeResp.getIvVaultKey()),
-                vaultWrappingKey
-        );
-
-        byte[] privateSigningKeyBytes = EncryptionHelper.decryptField(
-                Base64.getDecoder().decode(completeResp.getPrivateSigningKey()),
-                Base64.getDecoder().decode(completeResp.getIvPrivateSigningKey()),
-                signingWrappingKey
-        );
-        PrivateKey privateSigningKey = EncryptionHelper.getPrivateSigningKeyFromBytes(privateSigningKeyBytes);
-        PublicKey publicSigningKey = EncryptionHelper.getPublicSigningKeyFromBytes(
-                Base64.getDecoder().decode(completeResp.getPublicSigningKey())
-        );
-
-        return new LoginSuccessObject(
-                vaultKey,
-                privateSigningKey,
-                publicSigningKey,
-                completeResp.getAccessToken(),
-                completeResp.getRefreshToken(),
-                completeResp.getRefreshTokenExpiryTime()
         );
     }
 

@@ -74,7 +74,6 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
                     PasswordChangeStartResp.class
             ).body();
 
-            byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
 
             validatePublicValue(ctx.A(), "A", startEndpoint);
@@ -82,7 +81,7 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
 
             BigInteger x = generateX(
                     digest,
-                    saltAuth,
+                    startResp.getSaltAuth(),
                     email.getBytes(StandardCharsets.UTF_8),
                     ctx.passwordBytes()
             );
@@ -134,14 +133,14 @@ public class PasswordChangeServiceImpl implements PasswordChangeService {
             PasswordChangeCompleteReq completeReq = new PasswordChangeCompleteReq(
                     deviceId,
                     Base64.getEncoder().encodeToString(M1.toByteArray()),
-                    Base64.getEncoder().encodeToString(ctx.newSaltAuth()),
+                    ctx.newSaltAuth(),
                     Base64.getEncoder().encodeToString(newVerifier.toByteArray()),
-                    Base64.getEncoder().encodeToString(encryptedVaultKey),
-                    Base64.getEncoder().encodeToString(ctx.newVaultKeyIv()),
-                    Base64.getEncoder().encodeToString(ctx.newSaltKey()),
-                    Base64.getEncoder().encodeToString(ctx.newSaltHkdf()),
-                    Base64.getEncoder().encodeToString(encryptedSigningKey),
-                    Base64.getEncoder().encodeToString(ctx.newPrivateSigningKeyIv())
+                    encryptedVaultKey,
+                    ctx.newVaultKeyIv(),
+                    ctx.newSaltKey(),
+                    ctx.newSaltHkdf(),
+                    encryptedSigningKey,
+                    ctx.newPrivateSigningKeyIv()
             );
 
             apiClient.sendPostRequest(

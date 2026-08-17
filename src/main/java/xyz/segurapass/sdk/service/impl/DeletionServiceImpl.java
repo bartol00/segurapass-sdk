@@ -78,7 +78,6 @@ public class DeletionServiceImpl implements DeletionService {
 
             AuthorizedDeletionStartResp startResp = startApiResponse.body();
 
-            byte[] saltAuth = Base64.getDecoder().decode(startResp.getSaltAuth());
             BigInteger B = new BigInteger(1, Base64.getDecoder().decode(startResp.getB()));
 
             validatePublicValue(ctx.A(), "A", startEndpoint);
@@ -86,7 +85,7 @@ public class DeletionServiceImpl implements DeletionService {
 
             BigInteger x = generateX(
                     digest,
-                    saltAuth,
+                    startResp.getSaltAuth(),
                     email.getBytes(StandardCharsets.UTF_8),
                     ctx.passwordBytes()
             );
