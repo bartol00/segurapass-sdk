@@ -47,6 +47,7 @@
         <bouncycastle.version>1.84</bouncycastle.version>
         <java-jwt.version>4.5.2</java-jwt.version>
         <junit.version>6.1.1</junit.version>
+        <jjwt.version>0.13.0</jjwt.version>
     </properties>
 
     <dependencies>
@@ -84,6 +85,24 @@
             <version>${java-jwt.version}</version>
             <scope>compile</scope>
         </dependency>
+
+        <!--JJWT DEPENDENCIES-->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <!--JJWT DEPENDENCIES-->
 
         <!-- Testing -->
         <dependency>
