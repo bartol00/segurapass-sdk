@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class VersionModel {
     private String appVersion;
     private String protocolVersion;
+    private boolean emailClientActive;
 }
