@@ -32,7 +32,9 @@ public class VersionServiceImpl implements VersionService {
 
         return new VersionModel(
                 versionInfo.getAppVersion(),
-                versionInfo.getProtocolVersion()
+                versionInfo.getProtocolVersion(),
+                versionInfo.isEmailClientActive(),
+                versionInfo.getCredentialsLimit()
         );
     }
 

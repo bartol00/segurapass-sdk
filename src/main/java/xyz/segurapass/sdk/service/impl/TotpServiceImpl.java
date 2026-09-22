@@ -2,11 +2,13 @@ package xyz.segurapass.sdk.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.segurapass.api.ApiClient;
+import com.segurapass.exception.ApiException;
 import org.bouncycastle.crypto.agreement.srp.SRP6StandardGroups;
 import org.bouncycastle.crypto.params.SRP6GroupParameters;
 import xyz.segurapass.api.authorization.LoginCompleteResp;
 import xyz.segurapass.api.credentials.NonceResp;
 import xyz.segurapass.api.mfa.*;
+import xyz.segurapass.sdk.exception.SegurapassSdkException;
 import xyz.segurapass.sdk.helpers.JsonHelper;
 import xyz.segurapass.sdk.helpers.LoginSuccessObject;
 import xyz.segurapass.sdk.helpers.SrpLoginSession;
@@ -67,8 +69,10 @@ public class TotpServiceImpl implements TotpService {
                     TotpResp.class
             ).body();
 
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SegurapassSdkException(500, "POST", "Could not add TOTP", endEndpoint);
         }
     }
 
@@ -104,8 +108,10 @@ public class TotpServiceImpl implements TotpService {
                     TotpResp.class
             );
 
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SegurapassSdkException(500, "POST", "Could not remove TOTP", endEndpoint);
         }
     }
 
@@ -128,8 +134,10 @@ public class TotpServiceImpl implements TotpService {
                     TotpVerifyResp.class
             ).body().getRecoveryCode();
 
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SegurapassSdkException(500, "POST", "Could not verify TOTP", endpoint);
         }
     }
 
@@ -154,8 +162,10 @@ public class TotpServiceImpl implements TotpService {
                     resp
             );
 
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SegurapassSdkException(500, "POST", "Could not login with TOTP", endpoint);
         }
     }
 
@@ -180,8 +190,10 @@ public class TotpServiceImpl implements TotpService {
                     resp
             );
 
+        } catch (ApiException e) {
+            throw new SegurapassSdkException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SegurapassSdkException(500, "POST", "Could not recover account", endpoint);
         }
     }
 
