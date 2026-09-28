@@ -12,6 +12,6 @@ import java.time.Instant;
 public class ClientVersion {
     private String appVersion;
     private Integer protocolVersion;
-    private String sha256;
+    private String downloadUrl;
     private Instant releaseDate;
 }
